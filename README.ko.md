@@ -1,6 +1,6 @@
 # vssh
 
-[![CI](https://github.com/zeus-kim/vssh/actions/workflows/ci.yml/badge.svg)](https://github.com/zeus-kim/vssh/actions/workflows/ci.yml) [![PyPI](https://img.shields.io/pypi/v/vssh.svg)](https://pypi.org/project/vssh/) [![Python](https://img.shields.io/pypi/pyversions/vssh.svg)](https://pypi.org/project/vssh/) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE) [![Release](https://img.shields.io/github/v/release/zeus-kim/vssh)](https://github.com/zeus-kim/vssh/releases/latest)
+[![CI](https://github.com/zeus-kim/vssh/actions/workflows/ci.yml/badge.svg)](https://github.com/zeus-kim/vssh/actions/workflows/ci.yml) [![PyPI](https://img.shields.io/pypi/v/vssh.svg)](https://pypi.org/project/vssh/) [![Python](https://img.shields.io/pypi/pyversions/vssh.svg)](https://pypi.org/project/vssh/) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE) [![Release](https://img.shields.io/github/v/release/zeus-kim/vssh)](https://github.com/zeus-kim/vssh/releases/latest) [![CodeQL](https://github.com/zeus-kim/vssh/actions/workflows/codeql.yml/badge.svg)](https://github.com/zeus-kim/vssh/actions/workflows/codeql.yml) [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/zeus-kim/vssh/badge)](https://securityscorecards.dev/viewer/?uri=github.com/zeus-kim/vssh)
 
 **AI 시대의 원격 실행 — 구조화·범위제한·감사. `sshd` 없이.**
 
