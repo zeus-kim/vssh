@@ -1,0 +1,39 @@
+# Build outputs
+/vssh
+/vssh-*
+!/vssh-*.md
+/dist/
+/build/
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+known_hosts
+
+# OS/editor noise
+.DS_Store
+*.swp
+*.tmp
+
+# Runtime artifacts (live in ~/.vssh, never commit)
+vssh_id
+vssh_id.pub
+authorized_keys
+node_keys
+fleet_state.json
+fleet_memory.json
+audit.log
+.autosetup_done
+.vssh/
+*.bak
+*.bak.*
+
+# Operator's real fleet node list (run scripts with NODES="$(cat scripts/fleet.nodes)")
+scripts/fleet.nodes

@@ -1,0 +1,13 @@
+{
+  "name": "ci",
+  "exec_allow": [
+    "^/usr/bin/make( [a-zA-Z0-9_.:-]+)*$",
+    "^/usr/local/go/bin/go (build|test|vet)( \\./\\.\\.\\.)?$",
+    "^/usr/bin/git (fetch|pull|status|log|rev-parse|describe)( --?[a-zA-Z0-9=-]+| [a-zA-Z0-9_./-]+)*$"
+  ],
+  "exec_deny": [],
+  "file_paths": [],
+  "fwd_targets": [],
+  "rate": {"exec_per_min": 30},
+  "danger_preapproved": []
+}

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>vssh — key-only, mesh-native SSH replacement</title>
+<meta name="description" content="vssh is a key-only, mesh-native remote-execution daemon and MCP server — a drop-in ssh replacement built for fleets and AI-agent automation." />
+<style>
+  :root{
+    --bg:#0b0e14; --panel:#121722; --panel2:#0f141d; --ink:#e6edf3; --muted:#9aa7b4;
+    --accent:#5eead4; --accent2:#38bdf8; --line:#1e2633; --code:#0a0d13;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:radial-gradient(1200px 600px at 50% -10%, #14202e 0%, var(--bg) 60%);
+    color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent2);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 20px}
+  header{padding:84px 0 36px;text-align:center}
+  .logo{font-weight:800;font-size:15px;letter-spacing:.32em;color:var(--accent);text-transform:uppercase}
+  h1{font-size:clamp(34px,6vw,56px);line-height:1.08;margin:18px 0 10px;font-weight:800;letter-spacing:-.02em}
+  h1 .grad{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{color:var(--muted);font-size:clamp(16px,2.4vw,20px);max-width:680px;margin:0 auto 28px}
+  .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:10px}
+  .btn{display:inline-block;padding:11px 18px;border-radius:10px;font-weight:600;border:1px solid var(--line)}
+  .btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#05222a;border:none}
+  .btn.ghost{background:var(--panel);color:var(--ink)}
+  .install{margin:26px auto 0;max-width:680px}
+  .cmd{display:flex;align-items:center;gap:10px;background:var(--code);border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;color:#cfe9e3;justify-content:space-between}
+  .cmd code{overflow:auto;white-space:nowrap}
+  .copy{cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:8px;padding:6px 10px;font-size:12px;flex:none}
+  .copy:hover{color:var(--ink)}
+  .alt{color:var(--muted);font-size:13px;margin-top:10px;text-align:center}
+  section{padding:34px 0}
+  h2{font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:var(--muted);margin:0 0 18px;font-weight:700}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .card h3{margin:0 0 8px;font-size:17px}
+  .card p{margin:0;color:var(--muted);font-size:14.5px}
+  .steps{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:8px 4px}
+  .step{display:flex;gap:14px;padding:14px 18px;border-bottom:1px solid var(--line)}
+  .step:last-child{border-bottom:none}
+  .num{flex:none;width:26px;height:26px;border-radius:50%;background:var(--code);border:1px solid var(--line);display:grid;place-items:center;font-size:13px;color:var(--accent)}
+  .step code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13.5px;color:#cfe9e3;background:var(--code);padding:2px 7px;border-radius:6px}
+  .step .d{color:var(--muted);font-size:13px;margin-top:3px}
+  footer{padding:40px 0 70px;text-align:center;color:var(--muted);font-size:13.5px;border-top:1px solid var(--line);margin-top:24px}
+  .pill{display:inline-block;font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 10px;margin:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">vssh</div>
+    <h1>The <span class="grad">key-only</span> SSH replacement<br/>for fleets &amp; AI agents</h1>
+    <p class="sub">A mesh-native remote-execution daemon and MCP server. Per-node Ed25519 authentication, TLS&nbsp;1.3 with raw-key pinning, per-key policy and hash-chained audit — no shared secret anywhere.</p>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/zeus-kim/vssh">View on GitHub</a>
+      <a class="btn ghost" href="https://github.com/zeus-kim/vssh/releases/latest">Latest release</a>
+    </div>
+    <div class="install">
+      <div class="cmd">
+        <code id="i1">curl -fsSL https://raw.githubusercontent.com/zeus-kim/vssh/main/install.sh | bash</code>
+        <button class="copy" data-target="i1">copy</button>
+      </div>
+      <div class="alt">or <code style="color:#cfe9e3">pip install vssh</code> &nbsp;·&nbsp; checksum-verified &nbsp;·&nbsp; Linux (x86-64, arm64, arm, 386, riscv64, ppc64le, s390x) &amp; macOS</div>
+    </div>
+  </header>
+
+  <section>
+    <h2>Why vssh</h2>
+    <div class="grid">
+      <div class="card"><h3>Key-only auth</h3><p>Per-node Ed25519 challenge–response (VAUTH1) over TLS 1.3 with raw-public-key pinning. No shared secret, no HMAC, no PKI — authorization is your <code>authorized_keys</code>.</p></div>
+      <div class="card"><h3>MCP-native</h3><p>First-class tools for AI operators: exec, facts, capability routing, multi-target fan-out, and tunnels — every call policy-checked and audited.</p></div>
+      <div class="card"><h3>Policy &amp; audit</h3><p>Per-key capabilities, command allow/deny with anchored matching, path scoping, rate limits, and a tamper-evident hash-chained audit log.</p></div>
+      <div class="card"><h3>Tunnels</h3><p>Local (-L), reverse (-R) and dynamic SOCKS (-D) forwards, each individually authenticated and audited — managed straight from the MCP layer.</p></div>
+      <div class="card"><h3>Zero-touch onboarding</h3><p>Host-identity verification self-provisions on first use, so a fresh controller is ready with no manual setup step.</p></div>
+      <div class="card"><h3>Mesh &amp; cross-platform</h3><p>Built for WireGuard/Tailscale meshes. Single static binary across seven Linux architectures and macOS.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Quick start</h2>
+    <div class="steps">
+      <div class="step"><div class="num">1</div><div><code>curl -fsSL https://raw.githubusercontent.com/zeus-kim/vssh/main/install.sh | bash</code><div class="d">Install the checksum-verified binary to <code>$HOME/bin</code>.</div></div></div>
+      <div class="step"><div class="num">2</div><div><code>vssh server</code><div class="d">Run the daemon on a target node — key-only auth, nothing to configure.</div></div></div>
+      <div class="step"><div class="num">3</div><div><code>echo "ssh-ed25519 AAAA… operator" &gt;&gt; ~/.vssh/authorized_keys</code><div class="d">Authorize an operator key (optionally with <code>caps=</code> / <code>policy=</code> tags).</div></div></div>
+      <div class="step"><div class="num">4</div><div><code>vssh run node1 'uptime'</code><div class="d">Execute — or wire <code>vssh mcp</code> into your AI client for tools.</div></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Under the hood</h2>
+    <div>
+      <span class="pill">TLS 1.3 (stdlib)</span><span class="pill">Ed25519 raw-key pinning</span>
+      <span class="pill">VAUTH1 challenge–response</span><span class="pill">deny-first policy</span>
+      <span class="pill">hash-chained audit</span><span class="pill">FMUX multiplexing</span>
+      <span class="pill">host-identity verification</span><span class="pill">single static binary</span>
+    </div>
+  </section>
+
+  <footer>
+    vssh · open source at <a href="https://github.com/zeus-kim/vssh">github.com/zeus-kim/vssh</a><br/>
+    A research project — review the <a href="https://github.com/zeus-kim/vssh/blob/main/SECURITY.md">security model</a> before production use.
+  </footer>
+</div>
+<script>
+  document.querySelectorAll('.copy').forEach(function(b){
+    b.addEventListener('click',function(){
+      var t=document.getElementById(b.dataset.target);
+      navigator.clipboard.writeText(t.innerText).then(function(){
+        var o=b.innerText;b.innerText='copied';setTimeout(function(){b.innerText=o;},1400);
+      });
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "backup",
+  "exec_allow": [
+    "^/usr/bin/rsync -a(z|av)? /var/(lib|backups)/\\S+ vault:\\S+$",
+    "^/usr/local/bin/backup\\.sh( --verify)?$"
+  ],
+  "exec_deny": [],
+  "file_paths": ["/var/backups/**"],
+  "fwd_targets": [],
+  "rate": {"exec_per_min": 10},
+  "danger_preapproved": []
+}

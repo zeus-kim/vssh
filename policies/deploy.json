@@ -1,0 +1,13 @@
+{
+  "name": "deploy",
+  "exec_allow": [
+    "^/usr/local/bin/deploy\\.sh( --[a-z]+)*$"
+  ],
+  "exec_deny": [],
+  "file_paths": ["/usr/local/bin/**", "/etc/vssh/**"],
+  "fwd_targets": [],
+  "rate": {"exec_per_min": 20},
+  "danger_preapproved": [
+    "^/(usr/)?bin/systemctl restart (vsshd|caddy|nginx)$"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "name": "readonly",
+  "exec_allow": [],
+  "exec_deny": [],
+  "file_paths": [],
+  "fwd_targets": [],
+  "rate": {"exec_per_min": 0},
+  "danger_preapproved": []
+}
