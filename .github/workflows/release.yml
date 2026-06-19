@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build release binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          version="${GITHUB_REF_NAME:-dev}"
+          build_time="$(date -u '+%Y-%m-%d_%H:%M:%S')"
+          ldflags="-s -w -X main.version=${version#v} -X main.buildTime=${build_time}"
+
+          for target in \
+            linux/amd64 \
+            linux/arm64 \
+            linux/arm \
+            linux/386 \
+            linux/riscv64 \
+            linux/ppc64le \
+            linux/s390x \
+            darwin/amd64 \
+            darwin/arm64
+          do
+            os="${target%/*}"
+            arch="${target#*/}"
+            out="dist/vssh-${os}-${arch}"
+            armv=""
+            if [ "$arch" = arm ]; then armv="GOARM=7"; fi
+            env GOOS="$os" GOARCH="$arch" $armv CGO_ENABLED=0 go build -ldflags "$ldflags" -o "$out" ./cmd/vssh
+          done
+
+          cd dist
+          sha256sum vssh-* > checksums.txt
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/vssh-linux-amd64
+            dist/vssh-linux-arm64
+            dist/vssh-linux-arm
+            dist/vssh-linux-386
+            dist/vssh-linux-riscv64
+            dist/vssh-linux-ppc64le
+            dist/vssh-linux-s390x
+            dist/vssh-darwin-amd64
+            dist/vssh-darwin-arm64
+            dist/checksums.txt
+          generate_release_notes: true
