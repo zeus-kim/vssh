@@ -8,5 +8,5 @@ stay on the 4.x line to be the default install; the launcher then fetches the
 pinned BINARY_VERSION release asset from GitHub.
 """
 
-__version__ = "4.3.1"        # PyPI package version (hatch reads this)
+__version__ = "4.3.2"        # PyPI package version (hatch reads this)
 BINARY_VERSION = "0.7.48"    # GitHub release tag the launcher downloads (== cmd/vssh/main.go)
