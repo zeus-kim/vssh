@@ -1,5 +1,7 @@
 # vssh
 
+[![CI](https://github.com/zeus-kim/vssh/actions/workflows/ci.yml/badge.svg)](https://github.com/zeus-kim/vssh/actions/workflows/ci.yml) [![PyPI](https://img.shields.io/pypi/v/vssh.svg)](https://pypi.org/project/vssh/) [![Python](https://img.shields.io/pypi/pyversions/vssh.svg)](https://pypi.org/project/vssh/) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE) [![Release](https://img.shields.io/github/v/release/zeus-kim/vssh)](https://github.com/zeus-kim/vssh/releases/latest)
+
 **Remote execution for the AI era — structured, scoped, and audited. No `sshd`.**
 
 When an AI agent needs to run things across your servers, SSH hands it a full
