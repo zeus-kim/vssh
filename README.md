@@ -2,7 +2,32 @@
 
 [![CI](https://github.com/zeus-kim/vssh/actions/workflows/ci.yml/badge.svg)](https://github.com/zeus-kim/vssh/actions/workflows/ci.yml) [![PyPI](https://img.shields.io/pypi/v/vssh.svg)](https://pypi.org/project/vssh/) [![Python](https://img.shields.io/pypi/pyversions/vssh.svg)](https://pypi.org/project/vssh/) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE) [![Release](https://img.shields.io/github/v/release/zeus-kim/vssh)](https://github.com/zeus-kim/vssh/releases/latest) [![CodeQL](https://github.com/zeus-kim/vssh/actions/workflows/codeql.yml/badge.svg)](https://github.com/zeus-kim/vssh/actions/workflows/codeql.yml) [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/zeus-kim/vssh/badge)](https://securityscorecards.dev/viewer/?uri=github.com/zeus-kim/vssh)
 
-**Remote execution for the AI era — structured, scoped, and audited. No `sshd`.**
+> **SSH was designed for humans. vssh was designed for AI agents.**
+
+**The AI Execution Runtime** — structured, scoped, and audited remote execution. No `sshd`.
+
+<!-- TODO: Add demo.gif showing: vssh run g1 "nvidia-smi" → structured JSON evidence -->
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                        AI Agent                             │
+│              (Claude, Cursor, Codex, Gemini)                │
+└─────────────────────────┬───────────────────────────────────┘
+                          │ MCP
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                         vssh                                │
+│  ┌─────────┐ ┌────────┐ ┌───────────┐ ┌────────┐ ┌───────┐ │
+│  │ Intent  │→│ Policy │→│ Execution │→│Evidence│→│ Audit │ │
+│  └─────────┘ └────────┘ └───────────┘ └────────┘ └───────┘ │
+└─────────────────────────┬───────────────────────────────────┘
+                          │ TLS 1.3 + Ed25519
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Your Fleet                               │
+│        [ web1 ]  [ db1 ]  [ gpu1 ]  [ worker-* ]           │
+└─────────────────────────────────────────────────────────────┘
+```
 
 When an AI agent needs to run things across your servers, SSH hands it a full
 interactive shell — anything the logged-in user can do, as raw text, with no
@@ -223,24 +248,35 @@ Fleet & ops
 
 ## MCP server (for AI agents)
 
-`vssh mcp` exposes typed tools that return execution evidence. Current tools:
+`vssh mcp` exposes typed tools that return execution evidence — not raw text to
+parse. This is what makes vssh an **AI execution runtime**, not just an SSH
+replacement.
+
+### AI-native capabilities
+
+| Category | Tools | What it enables |
+|----------|-------|-----------------|
+| **Memory** | `vssh_memory` (get/set/note/auto_note/find/ask) | Per-node role, services, tags, notes — the AI remembers your fleet. |
+| **Intent** | `vssh_intent` | Natural language → command plan. "Check disk on all web servers" becomes an executable plan with policy verification. |
+| **Workflow** | `vssh_workflow` (list/run/status) | Predefined multi-step flows the AI can invoke by name. |
+| **Diff** | `vssh_diff` | Human-readable summary of audit-log changes — what changed, when, by whom. |
+
+### Core execution tools
 
 | Group | Tools |
 |------|-------|
-| Discovery / state | `vssh_setup`, `vssh_doctor`, `vssh_hosts_list`, `vssh_list`, `vssh_status`, `vssh_fleet_state` |
-| Routing | `vssh_route_select`, `vssh_exec_routed` |
-| Execution | `vssh_exec`, `vssh_exec_safe`, `vssh_exec_many`, `vssh_policy_check` |
-| Typed RPC / facts | `vssh_rpc_call`, `vssh_rpc_many`, `vssh_facts`, `vssh_facts_many` |
-| Jobs / artifacts | `vssh_job_start`, `vssh_job_status`, `vssh_job_logs`, `vssh_job_cancel`, `vssh_artifact_collect` |
-| Tunnels | `vssh_tunnel` (start/list/stop local, reverse, SOCKS forwards) |
-| Config (gated) | `vssh_config_list`, and — with `VSSH_ALLOW_CONFIG_WRITE=1` — `vssh_config_authorize_key`, `vssh_config_revoke_key`, `vssh_config_set_node`, `vssh_config_pin_node` |
+| Discovery / state | `vssh_fleet` (doctor, status, list, hosts, state, setup) |
+| Routing | `vssh_route` (select, policy_check) |
+| Execution | `vssh_exec` (plain, safe, routed, many) |
+| Typed RPC / facts | `vssh_query` (facts, facts_many, rpc, rpc_many) |
+| Jobs / artifacts | `vssh_job` (start, status, logs, cancel), `vssh_transport` (tunnel, artifact_collect) |
+| Config (gated) | `vssh_config` (list, authorize_key, revoke_key, set_node, pin_node) |
 
-Destructive commands (`rm -rf`, `shutdown`, `reboot`, `docker rm`,
-`kubectl delete`, `systemctl restart`, …) are **blocked** unless the caller sets
-`allow_dangerous: true` after explicit human approval. Config-mutating tools are
-**off by default** and require `VSSH_ALLOW_CONFIG_WRITE=1` (an explicit operator
-opt-in to let the AI manage local config). Every response is an evidence
-envelope. See [docs/MANUAL.md](docs/MANUAL.md).
+**Safety model:** destructive commands (`rm -rf`, `shutdown`, `reboot`,
+`docker rm`, `kubectl delete`, …) are **blocked** unless `allow_dangerous: true`
+after explicit human approval. Config-mutating tools require
+`VSSH_ALLOW_CONFIG_WRITE=1`. Every response is a structured evidence envelope.
+See [docs/MANUAL.md](docs/MANUAL.md).
 
 ---
 
@@ -315,10 +351,11 @@ Full model and the external-audit package: [SECURITY.md](SECURITY.md) ·
 
 ## Documentation
 
+- [AI Runtime](docs/AI_RUNTIME.md) — Memory, Intent, Workflow, Diff capabilities
 - [Why vssh](docs/WHY_VSSH.md) — positioning, ssh vs vssh, what ships today
 - [Python SDK](docs/PYTHON_SDK.md) · [Usage manual (CLI + MCP)](docs/MANUAL.md)
 - [Key rotation & recovery](docs/KEY_ROTATION.md) · [Security audit package](docs/SECURITY_AUDIT_PACKAGE.md)
-- [SECURITY.md](SECURITY.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [CHANGELOG.md](CHANGELOG.md) · [한국어 README](README.ko.md)
+- [Examples](examples/) · [SECURITY.md](SECURITY.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [CHANGELOG.md](CHANGELOG.md) · [한국어 README](README.ko.md)
 
 ## Building & contributing
 
@@ -332,4 +369,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-MIT
+Apache-2.0 — see [LICENSE](LICENSE).
