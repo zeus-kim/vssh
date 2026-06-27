@@ -4,6 +4,18 @@ Notable changes to **vssh**. Versioning is semantic-ish (`0.MINOR.PATCH`).
 
 ## [Unreleased]
 
+### Documentation
+- **AI Runtime documentation** — new `docs/AI_RUNTIME.md` explaining Memory,
+  Intent, Workflow, and Diff capabilities.
+- **README positioning** — reframed as "AI Execution Runtime" with architecture
+  diagram showing Intent → Policy → Execution → Evidence → Audit flow.
+- **Examples directory** — sample files for fleet inventory, workflows, memory,
+  and structured execution output.
+
+### Changed
+- **MCP tool documentation expanded** — README now highlights AI-native
+  capabilities (Memory, Intent, Workflow, Diff) alongside core execution tools.
+
 ## [0.7.48] — transport robustness
 
 ### Changed
