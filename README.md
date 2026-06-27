@@ -1,66 +1,32 @@
 # vssh
 
-[![CI](https://github.com/zeus-kim/vssh/actions/workflows/ci.yml/badge.svg)](https://github.com/zeus-kim/vssh/actions/workflows/ci.yml) [![PyPI](https://img.shields.io/pypi/v/vssh.svg)](https://pypi.org/project/vssh/) [![Python](https://img.shields.io/pypi/pyversions/vssh.svg)](https://pypi.org/project/vssh/) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE) [![Release](https://img.shields.io/github/v/release/zeus-kim/vssh)](https://github.com/zeus-kim/vssh/releases/latest) [![CodeQL](https://github.com/zeus-kim/vssh/actions/workflows/codeql.yml/badge.svg)](https://github.com/zeus-kim/vssh/actions/workflows/codeql.yml) [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/zeus-kim/vssh/badge)](https://securityscorecards.dev/viewer/?uri=github.com/zeus-kim/vssh)
+[![CI](https://github.com/zeus-kim/vssh/actions/workflows/ci.yml/badge.svg)](https://github.com/zeus-kim/vssh/actions/workflows/ci.yml) [![PyPI](https://img.shields.io/pypi/v/vssh.svg)](https://pypi.org/project/vssh/) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE) [![Release](https://img.shields.io/github/v/release/zeus-kim/vssh)](https://github.com/zeus-kim/vssh/releases/latest)
 
-> **SSH was designed for humans. vssh was designed for AI agents.**
+<div align="center">
 
-**The AI Execution Runtime** — structured, scoped, and audited remote execution. No `sshd`.
+# AI asks. vssh answers.
 
-<!-- TODO: Add demo.gif showing: vssh run g1 "nvidia-smi" → structured JSON evidence -->
+*"Show me my fleet"*  
+*"What services are running?"*  
+*"Check GPU status"*  
+*"Find all services on all servers"*  
+*"Suggest reallocation"*  
 
-```text
-                    ┌──────────────┐
-                    │   AI Agent   │
-                    └──────┬───────┘
-                           │ MCP
-                           ▼
-                    ┌──────────────┐
-                    │ Fleet Memory │  ← AI remembers your infrastructure
-                    └──────┬───────┘
-                           ▼
-                    ┌──────────────┐
-                    │    Intent    │  ← natural language → command plan
-                    └──────┬───────┘
-                           ▼
-                    ┌──────────────┐
-                    │   Workflow   │  ← multi-step operations
-                    └──────┬───────┘
-                           ▼
-                    ┌──────────────┐
-                    │    Policy    │  ← scoped, deny-first, fail-closed
-                    └──────┬───────┘
-                           ▼
-                    ┌──────────────┐
-                    │  Execution   │  ← TLS 1.3 + Ed25519
-                    └──────┬───────┘
-                           ▼
-                    ┌──────────────┐
-                    │   Evidence   │  ← typed results, not text
-                    └──────┬───────┘
-                           ▼
-                    ┌──────────────┐
-                    │    Audit     │  ← hash-chain, attributed
-                    └──────────────┘
-```
+Just connect Claude and ask.
 
-**Built-in MCP server.** One binary. No extra process. No JSON editing.
+![demo](docs/demo.gif)
 
-```bash
-vssh mcp-install --client claude   # or: cursor, codex, gemini
-```
+</div>
 
 ---
 
-## AI Runtime Features
+**The AI Execution Runtime.** Connect Claude, Cursor, or Codex to your infrastructure.
 
-| Feature | What it does |
-|---------|--------------|
-| **Fleet Memory** | AI remembers each node's role, services, history |
-| **Intent** | "Check disk on web servers" → verified command plan |
-| **Workflow** | Predefined multi-step operations, invokable by name |
-| **Diff** | Human-readable audit log summaries |
-| **Evidence** | Typed results (stdout/stderr/exit/duration), not text |
-| **Audit** | Hash-chained, key-attributed, tamper-evident |
+```bash
+vssh mcp-install --client claude   # That's it.
+```
+
+No sshd. No parsing text. No writing scripts. Just ask.
 
 ---
 
