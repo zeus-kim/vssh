@@ -32,11 +32,25 @@ No sshd. No parsing text. No writing scripts. Just ask.
 
 ## Install
 
-```bash
-# One-line (Linux x86-64/arm64/arm/386/riscv64/ppc64le/s390x, macOS)
-curl -fsSL https://raw.githubusercontent.com/zeus-kim/vssh/main/install.sh | bash
+**Recommended** — download, review, execute:
 
-# or via pip
+```bash
+curl -fsSLO https://raw.githubusercontent.com/zeus-kim/vssh/main/install.sh
+less install.sh        # inspect before running
+chmod +x install.sh && ./install.sh
+```
+
+> vssh recommends reviewing scripts before execution.
+
+**Fast** — convenience install:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/zeus-kim/vssh/main/install.sh | bash
+```
+
+**pip** — includes Python SDK:
+
+```bash
 pip install vssh
 ```
 
