@@ -93,45 +93,6 @@ auto-provisions host-identity verification (zero-touch) — no manual setup step
 
 ---
 
-## Install
-
-### One-line installer (recommended)
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/zeus-kim/vssh/main/install.sh | bash
-```
-
-The installer detects your OS/arch, downloads the matching binary from the
-[latest GitHub release](https://github.com/zeus-kim/vssh/releases/latest),
-**verifies its SHA-256 against the published `checksums.txt`**, and installs to
-`~/bin`. Releases cover Linux `amd64/arm64/arm/386/riscv64/ppc64le/s390x` and
-macOS `amd64/arm64` (FreeBSD is an experimental build).
-
-```bash
-curl -fsSL .../install.sh | VSSH_VERSION=0.7.42 bash   # pin a version
-curl -fsSL .../install.sh | INSTALL_DIR=/usr/local/bin bash
-```
-
-### pip (CLI + Python SDK)
-
-```bash
-pip install vssh
-```
-
-Installs the `vssh` CLI (the Go binary is fetched + checksum-verified for your
-platform on first run, cached under `~/.vssh/bin`) **and** the Python SDK
-(`from vssh import VSSH`).
-
-### From source
-
-```bash
-git clone https://github.com/zeus-kim/vssh && cd vssh
-make build          # builds ./vssh   (Go 1.25+)
-make install        # installs to /usr/local/bin (sudo)
-```
-
----
-
 ## Quick start
 
 On the **target** node, start the daemon (key-only auth — nothing to configure):
