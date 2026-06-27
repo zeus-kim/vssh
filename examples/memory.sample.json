@@ -1,0 +1,96 @@
+{
+  "gpu1": {
+    "role": "GPU compute node for ML inference",
+    "services": ["ollama", "cuda-toolkit", "docker"],
+    "tags": ["gpu", "ml", "production", "a100"],
+    "notes": [
+      {
+        "timestamp": "2025-06-10T09:00:00Z",
+        "source": "auto",
+        "text": "Initial setup complete. CUDA 12.4 installed."
+      },
+      {
+        "timestamp": "2025-06-15T14:30:00Z",
+        "source": "agent@controller",
+        "text": "Ollama deployed with llama3.1:70b model."
+      },
+      {
+        "timestamp": "2025-06-20T16:45:00Z",
+        "source": "auto",
+        "text": "Memory pressure observed during batch inference. Consider increasing swap or reducing batch size."
+      },
+      {
+        "timestamp": "2025-06-25T11:00:00Z",
+        "source": "admin@laptop",
+        "text": "Upgraded to A100 80GB. Previous: A100 40GB."
+      }
+    ],
+    "facts": {
+      "hostname": "gpu1.internal",
+      "os": "Ubuntu 22.04.4 LTS",
+      "kernel": "5.15.0-112-generic",
+      "gpu_model": "NVIDIA A100-SXM4-80GB",
+      "gpu_memory_gb": 80,
+      "cuda_version": "12.4",
+      "driver_version": "550.54.15",
+      "cpu_cores": 64,
+      "memory_gb": 512,
+      "disk_gb": 2000
+    },
+    "last_seen": "2025-06-28T10:30:15Z",
+    "health": "healthy"
+  },
+  "web1": {
+    "role": "Primary web server / canary for deployments",
+    "services": ["nginx", "docker", "node-exporter"],
+    "tags": ["web", "production", "canary"],
+    "notes": [
+      {
+        "timestamp": "2025-06-01T08:00:00Z",
+        "source": "auto",
+        "text": "Designated as canary host for zero-downtime deploys."
+      },
+      {
+        "timestamp": "2025-06-18T10:15:00Z",
+        "source": "deploy@controller",
+        "text": "Deployed v2.3.1. Health check passed after 3 retries."
+      }
+    ],
+    "facts": {
+      "hostname": "web1.internal",
+      "os": "Debian 12",
+      "cpu_cores": 8,
+      "memory_gb": 32,
+      "disk_gb": 500
+    },
+    "last_seen": "2025-06-28T10:29:00Z",
+    "health": "healthy"
+  },
+  "db1": {
+    "role": "Primary PostgreSQL database",
+    "services": ["postgres", "pgbouncer", "node-exporter"],
+    "tags": ["database", "production", "postgres"],
+    "notes": [
+      {
+        "timestamp": "2025-06-05T03:00:00Z",
+        "source": "auto",
+        "text": "Nightly backup completed. Size: 145GB."
+      },
+      {
+        "timestamp": "2025-06-12T09:30:00Z",
+        "source": "admin@laptop",
+        "text": "Increased shared_buffers to 16GB. Replication lag reduced."
+      }
+    ],
+    "facts": {
+      "hostname": "db1.internal",
+      "os": "Debian 12",
+      "postgres_version": "16.3",
+      "cpu_cores": 32,
+      "memory_gb": 128,
+      "disk_gb": 4000
+    },
+    "last_seen": "2025-06-28T10:28:00Z",
+    "health": "healthy"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "web1": {
+    "ip": "192.0.2.10",
+    "user": "deploy",
+    "tags": ["linux", "web", "production"],
+    "capabilities": ["docker", "nginx"],
+    "monitor_port": 8721
+  },
+  "web2": {
+    "ip": "192.0.2.11",
+    "user": "deploy",
+    "tags": ["linux", "web", "production"],
+    "capabilities": ["docker", "nginx"],
+    "monitor_port": 8721
+  },
+  "db1": {
+    "ip": "192.0.2.20",
+    "user": "postgres",
+    "tags": ["linux", "database", "production"],
+    "capabilities": ["postgres", "backup"],
+    "monitor_port": 8721
+  },
+  "gpu1": {
+    "ip": "192.0.2.30",
+    "user": "ubuntu",
+    "tags": ["linux", "gpu", "ml"],
+    "capabilities": ["cuda", "ollama", "docker"],
+    "monitor_port": 8721
+  },
+  "worker-1": {
+    "ip": "192.0.2.100",
+    "user": "worker",
+    "tags": ["linux", "worker", "batch"],
+    "capabilities": ["docker"],
+    "monitor_port": 8721
+  },
+  "worker-2": {
+    "ip": "192.0.2.101",
+    "user": "worker",
+    "tags": ["linux", "worker", "batch"],
+    "capabilities": ["docker"],
+    "monitor_port": 8721
+  }
+}

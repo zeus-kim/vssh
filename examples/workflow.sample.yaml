@@ -1,0 +1,79 @@
+# Example vssh workflow definition
+# This file shows the structure — actual workflows are stored in ~/.vssh/workflows/
+
+name: deploy-canary
+description: Deploy to canary host, verify health, then roll out to fleet
+
+params:
+  - name: artifact_url
+    description: URL of the deployment artifact
+    required: true
+  - name: canary_host
+    description: Host to deploy first for validation
+    default: web1
+  - name: fleet_hosts
+    description: Hosts to deploy after canary succeeds
+    default: ["web2", "web3"]
+
+steps:
+  - name: pre-flight
+    description: Verify artifact is accessible
+    exec:
+      host: "{{ canary_host }}"
+      command: "curl -sSf -o /dev/null {{ artifact_url }}"
+    on_failure: abort
+
+  - name: deploy-canary
+    description: Deploy to canary host
+    exec:
+      host: "{{ canary_host }}"
+      command: "/opt/deploy/deploy.sh {{ artifact_url }}"
+    on_failure: abort
+
+  - name: health-check
+    description: Verify canary is healthy
+    exec:
+      host: "{{ canary_host }}"
+      command: "/opt/deploy/health-check.sh"
+    retries: 3
+    retry_delay: 10s
+    on_failure: rollback-canary
+
+  - name: deploy-fleet
+    description: Roll out to remaining hosts
+    exec:
+      hosts: "{{ fleet_hosts }}"
+      command: "/opt/deploy/deploy.sh {{ artifact_url }}"
+      parallel: true
+      max_parallel: 2
+    on_failure: rollback-fleet
+
+  - name: verify-fleet
+    description: Health check all fleet hosts
+    exec:
+      hosts: "{{ fleet_hosts }}"
+      command: "/opt/deploy/health-check.sh"
+      parallel: true
+
+rollback:
+  - name: rollback-canary
+    trigger: on_failure
+    exec:
+      host: "{{ canary_host }}"
+      command: "/opt/deploy/rollback.sh"
+
+  - name: rollback-fleet
+    trigger: on_failure
+    exec:
+      hosts: "{{ fleet_hosts }}"
+      command: "/opt/deploy/rollback.sh"
+      parallel: true
+
+evidence:
+  collect:
+    - stdout
+    - stderr
+    - exit_code
+    - duration
+    - transport
+  retention: 30d
