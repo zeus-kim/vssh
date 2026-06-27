@@ -9,48 +9,68 @@
 <!-- TODO: Add demo.gif showing: vssh run g1 "nvidia-smi" → structured JSON evidence -->
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│                        AI Agent                             │
-│              (Claude, Cursor, Codex, Gemini)                │
-└─────────────────────────┬───────────────────────────────────┘
-                          │ MCP
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                         vssh                                │
-│  ┌─────────┐ ┌────────┐ ┌───────────┐ ┌────────┐ ┌───────┐ │
-│  │ Intent  │→│ Policy │→│ Execution │→│Evidence│→│ Audit │ │
-│  └─────────┘ └────────┘ └───────────┘ └────────┘ └───────┘ │
-└─────────────────────────┬───────────────────────────────────┘
-                          │ TLS 1.3 + Ed25519
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    Your Fleet                               │
-│        [ web1 ]  [ db1 ]  [ gpu1 ]  [ worker-* ]           │
-└─────────────────────────────────────────────────────────────┘
+                    ┌──────────────┐
+                    │   AI Agent   │
+                    └──────┬───────┘
+                           │ MCP
+                           ▼
+                    ┌──────────────┐
+                    │ Fleet Memory │  ← AI remembers your infrastructure
+                    └──────┬───────┘
+                           ▼
+                    ┌──────────────┐
+                    │    Intent    │  ← natural language → command plan
+                    └──────┬───────┘
+                           ▼
+                    ┌──────────────┐
+                    │   Workflow   │  ← multi-step operations
+                    └──────┬───────┘
+                           ▼
+                    ┌──────────────┐
+                    │    Policy    │  ← scoped, deny-first, fail-closed
+                    └──────┬───────┘
+                           ▼
+                    ┌──────────────┐
+                    │  Execution   │  ← TLS 1.3 + Ed25519
+                    └──────┬───────┘
+                           ▼
+                    ┌──────────────┐
+                    │   Evidence   │  ← typed results, not text
+                    └──────┬───────┘
+                           ▼
+                    ┌──────────────┐
+                    │    Audit     │  ← hash-chain, attributed
+                    └──────────────┘
 ```
 
-When an AI agent needs to run things across your servers, SSH hands it a full
-interactive shell — anything the logged-in user can do, as raw text, with no
-record of intent. `vssh` hands it a **bounded contract** instead:
-
-- **Scoped.** Each key is limited to exact **capabilities** (exec / file / rpc /
-  forward) and an optional **policy** (command allowlist, path scope, rate limit)
-  — deny-first, fail-closed, enforced by the daemon. The safe-exec path also
-  flags `curl … | bash` and credential-file reads for approval.
-- **Structured.** Every result is typed **evidence** — stdout, stderr, exit code,
-  duration, transport — not text to scrape.
-- **Audited.** Every action is **hash-chain** recorded and attributed to a key.
-- **Keyed, not shelled.** **TLS 1.3 + per-node Ed25519**, no shared secret, and
-  **no `sshd` on the target**.
-
-It's just as good for humans (`vssh run`, `shell`, file transfer, tunnels, jobs)
-and ships an **MCP server inside the binary**, so Claude, Cursor, Codex, and
-Gemini attach in one command.
+**Built-in MCP server.** One binary. No extra process. No JSON editing.
 
 ```bash
-# Install (Linux x86-64/arm64/arm/386/riscv64/ppc64le/s390x, macOS; FreeBSD experimental)
+vssh mcp-install --client claude   # or: cursor, codex, gemini
+```
+
+---
+
+## AI Runtime Features
+
+| Feature | What it does |
+|---------|--------------|
+| **Fleet Memory** | AI remembers each node's role, services, history |
+| **Intent** | "Check disk on web servers" → verified command plan |
+| **Workflow** | Predefined multi-step operations, invokable by name |
+| **Diff** | Human-readable audit log summaries |
+| **Evidence** | Typed results (stdout/stderr/exit/duration), not text |
+| **Audit** | Hash-chained, key-attributed, tamper-evident |
+
+---
+
+## Install
+
+```bash
+# One-line (Linux x86-64/arm64/arm/386/riscv64/ppc64le/s390x, macOS)
 curl -fsSL https://raw.githubusercontent.com/zeus-kim/vssh/main/install.sh | bash
-# or
+
+# or via pip
 pip install vssh
 ```
 
