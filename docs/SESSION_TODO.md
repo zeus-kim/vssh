@@ -1,5 +1,17 @@
 # 다음 세션 TODO
 
+> **작업 폴더:** `/Users/dragon/Projects/vssh-repo`
+> **GitHub:** https://github.com/zeus-kim/vssh
+
+## 폴더 구조
+
+| 경로 | 상태 |
+|------|------|
+| `Projects/vssh-repo` | ✅ 메인 작업 폴더 |
+| `meshpop-repos/vssh` | 개발 소스 (그대로 유지) |
+| `meshpop-repos/vssh-archive-20260628.bundle` | 백업 |
+| `Projects/vssh` | ❌ 삭제됨 (Rust 버전, 안 씀) |
+
 ## 완료된 작업 (2026-06-28)
 
 - [x] README 히어로: "AI asks. vssh answers."
@@ -13,7 +25,9 @@
 
 ### 1. YouTube 영상 업로드 (우선순위 높음)
 
-**영상 위치:** `/Users/dragon/Projects/screen/app-explainer/out/vssh-demo.mp4`
+**영상 위치:** `/Users/dragon/Projects/screen/app-explainer/out/vssh-demo.mp4` (5MB, 소리 있음)
+
+**계정:** zeus@zeus.kim
 
 **업로드 방법:**
 1. https://studio.youtube.com (zeus@zeus.kim)
