@@ -82,8 +82,8 @@ vssh help            # full help
 
 ## Discovery
 
-`vssh` finds nodes from, in order: a Wire coordinator, Tailscale, the config
-file (`~/.vssh/servers.json`), and a local cache. You can always address a node
+`vssh` finds nodes from, in order: Tailscale, the config file
+(`~/.vssh/servers.json`), and a local cache. See [Peer Discovery](docs/PEER_DISCOVERY.md). You can always address a node
 by an explicit IP as well.
 
 ## Configuration
