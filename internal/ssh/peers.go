@@ -38,14 +38,14 @@ func (c *Connector) loadPeers() {
 		}
 	}
 
-	// 2. Try coordinator
-	if peers := c.peersFromCoordinators(); peers != nil {
+	// 2. Try Tailscale (preferred for fresh online status)
+	if peers := c.peersFromTailscale(); peers != nil {
 		c.peers = c.enrichPeersFromConfig(peers)
 		return
 	}
 
-	// 3. Try Tailscale
-	if peers := c.peersFromTailscale(); peers != nil {
+	// 3. Try coordinator (fallback)
+	if peers := c.peersFromCoordinators(); peers != nil {
 		c.peers = c.enrichPeersFromConfig(peers)
 		return
 	}
