@@ -38,26 +38,30 @@ func (c *Connector) loadPeers() {
 		}
 	}
 
-	// 2. Try Tailscale (preferred for fresh online status)
+	// 2. Try coordinator for base data (names, IPs, stats)
+	basePeers := c.peersFromCoordinators()
+	if basePeers == nil {
+		// 3. Fallback to config-based servers
+		basePeers = c.peersFromConfig()
+	}
+	if basePeers == nil {
+		// 4. Fallback to cache
+		basePeers = c.peersFromCache()
+	}
+
+	// 5. Overlay Tailscale online status (fresh liveness)
+	if basePeers != nil {
+		c.peers = c.enrichPeersFromConfig(c.overlayTailscaleStatus(basePeers))
+		return
+	}
+
+	// 6. Last resort: Tailscale only
 	if peers := c.peersFromTailscale(); peers != nil {
 		c.peers = c.enrichPeersFromConfig(peers)
 		return
 	}
 
-	// 3. Try coordinator (fallback)
-	if peers := c.peersFromCoordinators(); peers != nil {
-		c.peers = c.enrichPeersFromConfig(peers)
-		return
-	}
-
-	// 4. Try config-based servers
-	if peers := c.peersFromConfig(); peers != nil {
-		c.peers = peers
-		return
-	}
-
-	// 5. Fallback to cache
-	c.peers = c.enrichPeersFromConfig(c.peersFromCache())
+	c.peers = nil
 }
 
 func (c *Connector) peersFromCoordinators() []config.Peer {
@@ -158,6 +162,82 @@ func (c *Connector) peersFromTailscale() []config.Peer {
 	}
 
 	return peers
+}
+
+// overlayTailscaleStatus updates peer online status from Tailscale while keeping
+// coordinator data (names, IPs, stats). This gives fresh liveness without losing
+// the richer metadata from the coordinator.
+func (c *Connector) overlayTailscaleStatus(basePeers []config.Peer) []config.Peer {
+	output := tailscaleStatusJSON()
+	if output == nil {
+		return basePeers
+	}
+
+	var data struct {
+		Peer map[string]struct {
+			HostName     string   `json:"HostName"`
+			TailscaleIPs []string `json:"TailscaleIPs"`
+			Online       bool     `json:"Online"`
+		} `json:"Peer"`
+	}
+
+	if err := json.Unmarshal(output, &data); err != nil {
+		return basePeers
+	}
+
+	// Build lookup: both exact match and normalized (alphanumeric lowercase only)
+	type tsInfo struct {
+		online     bool
+		normalized string
+	}
+	tsStatus := make(map[string]tsInfo)
+	for _, p := range data.Peer {
+		if p.HostName != "" {
+			lower := strings.ToLower(p.HostName)
+			normalized := normalizeHostname(lower)
+			tsStatus[lower] = tsInfo{online: p.Online, normalized: normalized}
+		}
+	}
+
+	// Update base peers with Tailscale online status
+	now := time.Now().Unix()
+	for i := range basePeers {
+		name := strings.ToLower(basePeers[i].NodeName)
+		normName := normalizeHostname(name)
+
+		// Try exact match first
+		if info, found := tsStatus[name]; found {
+			basePeers[i].Online = &info.online
+			if info.online {
+				basePeers[i].LastSeen = now
+			}
+			continue
+		}
+
+		// Try normalized match (e.g., "macmini" matches "odt의 Mac mini")
+		for _, info := range tsStatus {
+			if strings.Contains(info.normalized, normName) || strings.Contains(normName, info.normalized) {
+				basePeers[i].Online = &info.online
+				if info.online {
+					basePeers[i].LastSeen = now
+				}
+				break
+			}
+		}
+	}
+
+	return basePeers
+}
+
+// normalizeHostname extracts only alphanumeric characters for fuzzy matching
+func normalizeHostname(s string) string {
+	var result strings.Builder
+	for _, r := range strings.ToLower(s) {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			result.WriteRune(r)
+		}
+	}
+	return result.String()
 }
 
 func (c *Connector) peersFromConfig() []config.Peer {
