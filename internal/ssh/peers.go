@@ -30,34 +30,37 @@ type localServerConfig struct {
 }
 
 func (c *Connector) loadPeers() {
-	// 1. Try wire daemon first
+	// 1. Try Tailscale first (real-time IPs and online status)
+	tsPeers := c.peersFromTailscale()
+
+	// 2. Get stats from daemon or coordinator
+	var statsPeers []config.Peer
 	if config.IsDaemonRunning() {
-		if peers := c.peersFromDaemon(); peers != nil {
-			c.peers = c.enrichPeersFromConfig(peers)
-			return
-		}
+		statsPeers = c.peersFromDaemon()
+	}
+	if statsPeers == nil {
+		statsPeers = c.peersFromCoordinators()
+	}
+	if statsPeers == nil {
+		statsPeers = c.peersFromCache()
 	}
 
-	// 2. Try coordinator for base data (names, IPs, stats)
-	basePeers := c.peersFromCoordinators()
-	if basePeers == nil {
-		// 3. Fallback to config-based servers
-		basePeers = c.peersFromConfig()
-	}
-	if basePeers == nil {
-		// 4. Fallback to cache
-		basePeers = c.peersFromCache()
-	}
-
-	// 5. Overlay Tailscale online status (fresh liveness)
-	if basePeers != nil {
-		c.peers = c.enrichPeersFromConfig(c.overlayTailscaleStatus(basePeers))
+	// 3. Merge: Tailscale base + stats overlay
+	if tsPeers != nil {
+		merged := c.mergeStats(tsPeers, statsPeers)
+		c.peers = c.enrichPeersFromConfig(merged)
 		return
 	}
 
-	// 6. Last resort: Tailscale only
-	if peers := c.peersFromTailscale(); peers != nil {
-		c.peers = c.enrichPeersFromConfig(peers)
+	// 4. No Tailscale: use daemon/coordinator/config/cache
+	if statsPeers != nil {
+		c.peers = c.enrichPeersFromConfig(statsPeers)
+		return
+	}
+
+	basePeers := c.peersFromConfig()
+	if basePeers != nil {
+		c.peers = c.enrichPeersFromConfig(basePeers)
 		return
 	}
 
@@ -127,6 +130,7 @@ func (c *Connector) peersFromTailscale() []config.Peer {
 			DNSName      string   `json:"DNSName"`
 			TailscaleIPs []string `json:"TailscaleIPs"`
 			Online       bool     `json:"Online"`
+			OS           string   `json:"OS"`
 		} `json:"Peer"`
 	}
 
@@ -135,30 +139,37 @@ func (c *Connector) peersFromTailscale() []config.Peer {
 	}
 
 	var peers []config.Peer
+	selfName := normalizeHostname(extractTailscaleName(data.Self.DNSName, data.Self.HostName))
 
-	// Add self
-	if len(data.Self.TailscaleIPs) > 0 && data.Self.HostName != "" {
-		peers = append(peers, config.Peer{
-			NodeName: data.Self.HostName,
-			VpnIP:    data.Self.TailscaleIPs[0],
-		})
-	}
-
-	// Add peers
+	// Add peers (skip self, phones, tablets)
 	for _, p := range data.Peer {
-		if len(p.TailscaleIPs) > 0 && p.HostName != "" {
-			online := p.Online
-			var lastSeen interface{}
-			if online {
-				lastSeen = time.Now().Unix()
-			}
-			peers = append(peers, config.Peer{
-				NodeName: p.HostName,
-				VpnIP:    p.TailscaleIPs[0],
-				Online:   &online,
-				LastSeen: lastSeen,
-			})
+		if len(p.TailscaleIPs) == 0 {
+			continue
 		}
+		// Skip phones and tablets
+		osLower := strings.ToLower(p.OS)
+		if osLower == "ios" || osLower == "android" {
+			continue
+		}
+		nodeName := extractTailscaleName(p.DNSName, p.HostName)
+		if nodeName == "" {
+			continue
+		}
+		// Skip current machine
+		if normalizeHostname(nodeName) == selfName {
+			continue
+		}
+		online := p.Online
+		var lastSeen interface{}
+		if online {
+			lastSeen = time.Now().Unix()
+		}
+		peers = append(peers, config.Peer{
+			NodeName: nodeName,
+			VpnIP:    p.TailscaleIPs[0],
+			Online:   &online,
+			LastSeen: lastSeen,
+		})
 	}
 
 	return peers
@@ -229,6 +240,18 @@ func (c *Connector) overlayTailscaleStatus(basePeers []config.Peer) []config.Pee
 	return basePeers
 }
 
+// extractTailscaleName prefers DNSName (user-set name) over HostName (machine hostname)
+func extractTailscaleName(dnsName, hostName string) string {
+	// DNSName format: "v1.tail2b6cb8.ts.net." -> extract "v1"
+	if dnsName != "" {
+		parts := strings.Split(strings.TrimSuffix(dnsName, "."), ".")
+		if len(parts) > 0 && parts[0] != "" {
+			return parts[0]
+		}
+	}
+	return hostName
+}
+
 // normalizeHostname extracts only alphanumeric characters for fuzzy matching
 func normalizeHostname(s string) string {
 	var result strings.Builder
@@ -238,6 +261,68 @@ func normalizeHostname(s string) string {
 		}
 	}
 	return result.String()
+}
+
+// mergeStats overlays stats from daemon/coordinator onto Tailscale peers
+func (c *Connector) mergeStats(tsPeers, statsPeers []config.Peer) []config.Peer {
+	if statsPeers == nil {
+		return tsPeers
+	}
+
+	// Build lookup by normalized hostname
+	type statsInfo struct {
+		peer       *config.Peer
+		normalized string
+	}
+	statsMap := make(map[string]statsInfo)
+	for i := range statsPeers {
+		norm := normalizeHostname(statsPeers[i].NodeName)
+		statsMap[norm] = statsInfo{peer: &statsPeers[i], normalized: norm}
+	}
+
+	// Merge stats into Tailscale peers
+	for i := range tsPeers {
+		tsNorm := normalizeHostname(tsPeers[i].NodeName)
+
+		// Try exact match first
+		if info, ok := statsMap[tsNorm]; ok {
+			applyStats(&tsPeers[i], info.peer)
+			continue
+		}
+
+		// Try fuzzy match only for longer names (e.g., "macmini" matches "odt의 Mac mini")
+		// Skip fuzzy for short names (<=3 chars) to avoid false matches like s1/s2
+		if len(tsNorm) > 3 {
+			for _, info := range statsMap {
+				if len(info.normalized) > 3 && (strings.Contains(tsNorm, info.normalized) || strings.Contains(info.normalized, tsNorm)) {
+					applyStats(&tsPeers[i], info.peer)
+					// Use the cleaner name from stats if available
+					if len(info.peer.NodeName) < len(tsPeers[i].NodeName) {
+						tsPeers[i].NodeName = info.peer.NodeName
+					}
+					break
+				}
+			}
+		}
+	}
+
+	return tsPeers
+}
+
+func applyStats(dst, src *config.Peer) {
+	dst.Stats = src.Stats
+	if dst.Port == 0 {
+		dst.Port = src.Port
+	}
+	if dst.User == "" {
+		dst.User = src.User
+	}
+	if dst.PublicIP == "" {
+		dst.PublicIP = src.PublicIP
+	}
+	if dst.LanIP == "" {
+		dst.LanIP = src.LanIP
+	}
 }
 
 func (c *Connector) peersFromConfig() []config.Peer {
@@ -301,8 +386,26 @@ func (c *Connector) enrichPeersFromConfig(peers []config.Peer) []config.Peer {
 		return peers
 	}
 
+	// Build IP lookup for renaming
+	ipToName := make(map[string]string)
+	for name, srv := range servers {
+		if srv.IP != "" {
+			ipToName[srv.IP] = name
+		}
+		if srv.VpnIP != "" {
+			ipToName[srv.VpnIP] = name
+		}
+	}
+
 	for i := range peers {
 		name := peers[i].NodeName
+
+		// Check if IP matches a config entry - use that name (alias)
+		if newName, ok := ipToName[peers[i].VpnIP]; ok {
+			peers[i].NodeName = newName
+			name = newName
+		}
+
 		srv, ok := servers[name]
 		if !ok {
 			for candidate, value := range servers {
