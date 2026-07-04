@@ -85,7 +85,7 @@ chmod +x install.sh && ./install.sh
 curl -fsSL https://raw.githubusercontent.com/zeus-kim/vssh/main/install.sh | bash
 ```
 
-**pip** — includes Python SDK:
+**pip** — Python SDK wrapper (auto-downloads Go binary on first run):
 
 ```bash
 pip install vssh
