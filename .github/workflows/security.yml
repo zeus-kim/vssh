@@ -10,7 +10,8 @@ permissions:
   contents: read
 jobs:
   govulncheck:
-    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: [self-hosted, Linux, X64, d2]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -19,7 +20,8 @@ jobs:
       - run: go install golang.org/x/vuln/cmd/govulncheck@latest
       - run: govulncheck ./...
   staticcheck:
-    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: [self-hosted, Linux, X64, d2]
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -29,7 +31,8 @@ jobs:
       - run: go install honnef.co/go/tools/cmd/staticcheck@latest
       - run: staticcheck ./...
   gosec:
-    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: [self-hosted, Linux, X64, d2]
     permissions:
       contents: read
       security-events: write
