@@ -9,6 +9,11 @@ on:
 permissions:
   contents: write
 
+env:
+  HOME: /root
+  GOPATH: /root/go
+  GOMODCACHE: /root/go/pkg/mod
+
 jobs:
   release:
     runs-on: [self-hosted, Linux, X64, vps, docker, go-ci]
