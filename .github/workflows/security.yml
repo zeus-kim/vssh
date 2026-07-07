@@ -10,9 +10,9 @@ permissions:
   contents: read
 
 env:
-  HOME: /root
-  GOPATH: /root/go
-  GOMODCACHE: /root/go/pkg/mod
+  HOME: /home/dragon
+  GOPATH: /home/dragon/go
+  GOMODCACHE: /home/dragon/go/pkg/mod
 
 jobs:
   govulncheck:
