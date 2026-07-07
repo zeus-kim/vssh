@@ -10,8 +10,8 @@ permissions:
   contents: read
 
 env:
-  GOPATH: ${{ runner.temp }}/go
-  GOMODCACHE: ${{ runner.temp }}/go/pkg/mod
+  GOPATH: /tmp/vssh-go
+  GOMODCACHE: /tmp/vssh-go/pkg/mod
 
 jobs:
   govulncheck:

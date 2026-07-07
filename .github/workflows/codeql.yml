@@ -11,8 +11,8 @@ permissions:
   security-events: write
 
 env:
-  GOPATH: ${{ runner.temp }}/go
-  GOMODCACHE: ${{ runner.temp }}/go/pkg/mod
+  GOPATH: /tmp/vssh-go
+  GOMODCACHE: /tmp/vssh-go/pkg/mod
 
 jobs:
   analyze:

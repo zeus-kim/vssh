@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 env:
-  GOPATH: ${{ runner.temp }}/go
-  GOMODCACHE: ${{ runner.temp }}/go/pkg/mod
+  GOPATH: /tmp/vssh-go
+  GOMODCACHE: /tmp/vssh-go/pkg/mod
 
 jobs:
   build:
