@@ -9,14 +9,9 @@ on:
 permissions:
   contents: write
 
-env:
-  HOME: /home/dragon
-  GOPATH: /home/dragon/go
-  GOMODCACHE: /home/dragon/go/pkg/mod
-
 jobs:
   release:
-    runs-on: [self-hosted, Linux, X64, d2, docker, go-ci]
+    runs-on: [self-hosted, Linux, X64, docker, go-ci]
     steps:
       - uses: actions/checkout@v4
 

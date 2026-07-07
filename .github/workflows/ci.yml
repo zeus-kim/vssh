@@ -6,15 +6,10 @@ on:
   pull_request:
     branches: [main]
 
-env:
-  HOME: /home/dragon
-  GOPATH: /home/dragon/go
-  GOMODCACHE: /home/dragon/go/pkg/mod
-
 jobs:
   build:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-    runs-on: [self-hosted, Linux, X64, d2, docker, go-ci]
+    runs-on: [self-hosted, Linux, X64, docker, go-ci]
     steps:
       - uses: actions/checkout@v4
 
