@@ -11,7 +11,7 @@ permissions:
 jobs:
   govulncheck:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-    runs-on: [self-hosted, Linux, X64, d2]
+    runs-on: [self-hosted, Linux, X64, vps, docker, go-ci]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -21,7 +21,7 @@ jobs:
       - run: govulncheck ./...
   staticcheck:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-    runs-on: [self-hosted, Linux, X64, d2]
+    runs-on: [self-hosted, Linux, X64, vps, docker, go-ci]
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -32,7 +32,7 @@ jobs:
       - run: staticcheck ./...
   gosec:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-    runs-on: [self-hosted, Linux, X64, d2]
+    runs-on: [self-hosted, Linux, X64, vps, docker, go-ci]
     permissions:
       contents: read
       security-events: write

@@ -8,7 +8,7 @@ on:
 permissions: read-all
 jobs:
   analysis:
-    runs-on: [self-hosted, Linux, X64, d2]
+    runs-on: [self-hosted, Linux, X64, vps, docker, go-ci]
     permissions:
       security-events: write
       id-token: write

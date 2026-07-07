@@ -12,7 +12,7 @@ permissions:
 jobs:
   analyze:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-    runs-on: [self-hosted, Linux, X64, d2]
+    runs-on: [self-hosted, Linux, X64, vps, docker, go-ci]
     steps:
       - uses: actions/checkout@v4
       - uses: github/codeql-action/init@v3
