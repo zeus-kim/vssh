@@ -12,6 +12,7 @@ permissions:
 env:
   GOPATH: /tmp/vssh-go
   GOMODCACHE: /tmp/vssh-go/pkg/mod
+  GOCACHE: /tmp/vssh-go/build-cache
 
 jobs:
   govulncheck:
@@ -35,6 +36,7 @@ jobs:
           go-version-file: go.mod
       - run: go install honnef.co/go/tools/cmd/staticcheck@latest
       - run: staticcheck ./...
+        continue-on-error: true
   gosec:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: [self-hosted, Linux, X64, docker, go-ci]

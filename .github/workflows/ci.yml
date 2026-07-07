@@ -9,6 +9,7 @@ on:
 env:
   GOPATH: /tmp/vssh-go
   GOMODCACHE: /tmp/vssh-go/pkg/mod
+  GOCACHE: /tmp/vssh-go/build-cache
 
 jobs:
   build:
