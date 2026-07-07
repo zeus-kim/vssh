@@ -20,7 +20,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: [self-hosted, Linux, X64, vps, docker, go-ci]
+    runs-on: [self-hosted, Linux, X64, d2, docker, go-ci]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
