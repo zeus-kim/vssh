@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  GOPATH: ${{ runner.temp }}/go
+  GOMODCACHE: ${{ runner.temp }}/go/pkg/mod
+
 jobs:
   build:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}

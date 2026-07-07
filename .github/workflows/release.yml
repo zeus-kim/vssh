@@ -9,6 +9,10 @@ on:
 permissions:
   contents: write
 
+env:
+  GOPATH: ${{ runner.temp }}/go
+  GOMODCACHE: ${{ runner.temp }}/go/pkg/mod
+
 jobs:
   release:
     runs-on: [self-hosted, Linux, X64, docker, go-ci]
