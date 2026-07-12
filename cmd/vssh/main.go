@@ -166,6 +166,11 @@ Usage:
   vssh memory find [--role=R] [--tag=T] [--service=S] [query]  Filter/search nodes
   vssh memory auto-note <node> [output]  Extract notes from command output
   vssh memory ask <query>     Natural-language fleet memory query
+  vssh intent "<request>" [--target <host>] [--run]  NL request → command plan (optionally run)
+  vssh workflow list          List predefined multi-step workflows
+  vssh workflow run <name> --target <host> [--param k=v] [--dry-run]  Run a workflow
+  vssh workflow status <run-id>  Show a past workflow run
+  vssh diff [--node <host>] [--last N] [--since 1h]  Human summary of audit-log changes
 
 Examples:
   vssh server                    # Start server on :48291
@@ -179,6 +184,9 @@ Examples:
   vssh bench db1 20              # Measure native exec latency
 	vssh put file.tar web1:/tmp/   # Upload file
   vssh get web1:/var/log/x .     # Download file
+  vssh intent "disk check" --target d1 --run   # NL → plan → run
+  vssh workflow run service-restart --target d1 --param service=nginx
+  vssh diff --node d1 --since 2h  # What changed on d1 in the last 2h
 
 Environment:
   VSSH_PORT                Server port (default: 48291)

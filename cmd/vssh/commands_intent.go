@@ -15,8 +15,18 @@ func cmdIntent(args []string) {
 	run := false
 	jsonOut := false
 	var queryParts []string
-	for _, a := range args {
+	// Index-based so --target accepts both "--target host" and "--target=host",
+	// matching `vssh workflow` (and the documented usage).
+	for i := 0; i < len(args); i++ {
+		a := args[i]
 		switch {
+		case a == "--target":
+			if i+1 >= len(args) {
+				fmt.Fprintln(os.Stderr, "vssh: --target needs a value")
+				os.Exit(1)
+			}
+			i++
+			target = args[i]
 		case strings.HasPrefix(a, "--target="):
 			target = strings.TrimPrefix(a, "--target=")
 		case a == "--run":
@@ -32,7 +42,7 @@ func cmdIntent(args []string) {
 	}
 	query := strings.Join(queryParts, " ")
 	if strings.TrimSpace(query) == "" {
-		fmt.Fprintln(os.Stderr, `usage: vssh intent "disk check" [--target=X] [--run] [--json]`)
+		fmt.Fprintln(os.Stderr, `usage: vssh intent "disk check" [--target <host>] [--run] [--json]`)
 		os.Exit(1)
 	}
 	plan, ok := intent.Resolve(query)

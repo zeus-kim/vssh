@@ -103,6 +103,61 @@ vssh list                          # list peers
 vssh doctor [--json]               # diagnose binary, auth model, peers, MCP readiness
 ```
 
+## 4a. AI Runtime — memory, intent, workflow, diff
+
+Four standalone layers turn raw exec into an operator loop: **remember** the
+fleet, **plan** from plain language, **run** repeatable playbooks, and **review**
+what changed. All are rule-based (no LLM, no network beyond vssh's own transport)
+and store state under `~/.vssh/`. Flags accept both `--flag value` and
+`--flag=value`.
+
+**Memory** — per-node role/services/tags and a rolling note log
+(`~/.vssh/fleet_memory.json`):
+
+```bash
+vssh memory get [node]                              # show memory (all nodes, or one)
+vssh memory set d1 --role gpu --services ollama,nvidia --tags prod,120b
+vssh memory note d1 "swapped to 550W PSU"           # timestamped event note
+vssh memory find --role gpu --tag prod [query]      # filter/search nodes
+vssh memory auto-note d1 "<command output>"         # extract notes (df≥85%, failed units, load…)
+vssh memory ask "which nodes run ollama"            # natural-language query
+```
+
+**Intent** — a plain-language request → a command plan (23 built-ins:
+disk/log/service/gpu/process/memory/network/…). Plans by default; `--run` needs
+`--target`. Override or add intents in `~/.vssh/intents.json`:
+
+```bash
+vssh intent "disk check"                            # show the plan only
+vssh intent "service check nginx" --target d1 --run # plan + run on d1
+vssh intent "gpu status" --target g1 --run --json   # structured output
+```
+
+**Workflow** — predefined multi-step playbooks with branching. `on_fail` per
+step is `abort` | `continue` | `<step-id>` (jump); runs are recorded under
+`~/.vssh/workflow_runs/`. Built-ins: `service-restart` (param `service`),
+`health-check`, `disk-cleanup`, `log-collect`. Add your own as
+`~/.vssh/workflows/*.json`:
+
+```bash
+vssh workflow list                                  # built-ins + your JSON
+vssh workflow run health-check --target d1
+vssh workflow run service-restart --target d1 --param service=nginx
+vssh workflow run disk-cleanup --target d1 --dry-run   # plan without executing
+vssh workflow status <run-id>                       # replay a past run
+```
+
+**Diff** — turn the append-only audit log into a human account of what was done.
+Commands are grouped into operator sessions (same key+endpoint, 5-min gap) and
+before/after is inferred from the command text (the log stores commands, not
+output — e.g. `sed -i 's/listen 80/…/'` renders `listen 80 → 443`):
+
+```bash
+vssh diff                                           # local daemon's audit log
+vssh diff --node d1 --since 2h                      # what changed on d1 recently
+vssh diff --last 5 --json                           # newest 5 sessions, structured
+```
+
 ## 5. Security & environment variables
 
 | Variable | Effect |

@@ -59,13 +59,13 @@ func builtinIntents() []Intent {
 		{
 			Name:      "process-check",
 			Keywords:  []string{"process check", "processes", "top process", "cpu hogs"},
-			Commands:  []string{"ps aux --sort=-%cpu | head -20"},
+			Commands:  []string{"ps -eo pid,pcpu,pmem,comm 2>/dev/null | sort -k2 -nr | head -20"},
 			Rationale: "the top processes by CPU",
 		},
 		{
 			Name:      "memory-check",
 			Keywords:  []string{"memory check", "memory usage", "memory", "ram", "mem"},
-			Commands:  []string{"free -h 2>/dev/null || vm_stat", "ps aux --sort=-%mem | head -10"},
+			Commands:  []string{"free -h 2>/dev/null || vm_stat", "ps -eo pid,pmem,pcpu,comm 2>/dev/null | sort -k2 -nr | head -10"},
 			Rationale: "memory pressure and the top processes by RSS",
 		},
 		{

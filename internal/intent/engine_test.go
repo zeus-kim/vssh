@@ -41,7 +41,7 @@ func TestResolveGPUAndProcess(t *testing.T) {
 	if p, ok := Resolve("gpu status"); !ok || p.Commands[0] != "nvidia-smi" {
 		t.Fatalf("gpu status → %v,%v", p.Commands, ok)
 	}
-	if p, ok := Resolve("process check"); !ok || !strings.Contains(p.Commands[0], "ps aux") {
+	if p, ok := Resolve("process check"); !ok || !strings.Contains(p.Commands[0], "ps -eo") {
 		t.Fatalf("process check → %v,%v", p.Commands, ok)
 	}
 }

@@ -32,18 +32,45 @@ func readAuditSource(node string) ([]byte, error) {
 
 func diffOptionsFromArgs(node *string, jsonOut *bool, args []string) (diff.Options, error) {
 	opts := diff.Options{LastN: 10}
-	for _, a := range args {
+	// Index-based so --node/--last/--since accept both "--flag value" and
+	// "--flag=value", matching `vssh workflow`/`vssh intent`.
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		// value returns the flag's argument for both the "--flag=v" and
+		// "--flag v" spellings, advancing i for the two-token form.
+		value := func(name string) (string, error) {
+			if strings.HasPrefix(a, name+"=") {
+				return strings.TrimPrefix(a, name+"="), nil
+			}
+			if i+1 >= len(args) {
+				return "", fmt.Errorf("%s needs a value", name)
+			}
+			i++
+			return args[i], nil
+		}
 		switch {
-		case strings.HasPrefix(a, "--node="):
-			*node = strings.TrimPrefix(a, "--node=")
-		case strings.HasPrefix(a, "--last="):
-			n, err := strconv.Atoi(strings.TrimPrefix(a, "--last="))
+		case a == "--node" || strings.HasPrefix(a, "--node="):
+			v, err := value("--node")
+			if err != nil {
+				return opts, err
+			}
+			*node = v
+		case a == "--last" || strings.HasPrefix(a, "--last="):
+			v, err := value("--last")
+			if err != nil {
+				return opts, err
+			}
+			n, err := strconv.Atoi(v)
 			if err != nil {
 				return opts, fmt.Errorf("invalid --last: %v", err)
 			}
 			opts.LastN = n
-		case strings.HasPrefix(a, "--since="):
-			d, err := time.ParseDuration(strings.TrimPrefix(a, "--since="))
+		case a == "--since" || strings.HasPrefix(a, "--since="):
+			v, err := value("--since")
+			if err != nil {
+				return opts, err
+			}
+			d, err := time.ParseDuration(v)
 			if err != nil {
 				return opts, fmt.Errorf("invalid --since: %v", err)
 			}
@@ -62,7 +89,7 @@ func cmdDiff(args []string) {
 	jsonOut := false
 	opts, err := diffOptionsFromArgs(&node, &jsonOut, args)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "vssh: %v\nusage: vssh diff [--node=X] [--last=N] [--since=1h] [--json]\n", err)
+		fmt.Fprintf(os.Stderr, "vssh: %v\nusage: vssh diff [--node <host>] [--last <N>] [--since <dur>] [--json]\n", err)
 		os.Exit(1)
 	}
 	data, err := readAuditSource(node)

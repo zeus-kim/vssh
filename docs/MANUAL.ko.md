@@ -102,6 +102,58 @@ vssh list                          # 피어 목록
 vssh doctor [--json]               # 바이너리/인증모델/피어/MCP 준비 상태 진단
 ```
 
+## 4a. AI 런타임 — memory · intent · workflow · diff
+
+단순 exec를 운영 루프로 바꾸는 4개 독립 레이어: 플릿을 **기억**하고, 평문에서
+**계획**하고, 반복 플레이북을 **실행**하고, 무엇이 바뀌었는지 **회고**한다. 전부
+규칙 기반(LLM·외부 네트워크 없음, vssh 자체 전송만)이며 상태는 `~/.vssh/` 아래에
+저장. 플래그는 `--flag value`와 `--flag=value` 둘 다 허용.
+
+**Memory** — 노드별 role/services/tags + 롤링 노트 로그
+(`~/.vssh/fleet_memory.json`):
+
+```bash
+vssh memory get [node]                              # 메모리 조회(전체 또는 특정 노드)
+vssh memory set d1 --role gpu --services ollama,nvidia --tags prod,120b
+vssh memory note d1 "550W PSU로 교체"               # 타임스탬프 이벤트 노트
+vssh memory find --role gpu --tag prod [query]      # 노드 필터/검색
+vssh memory auto-note d1 "<명령 출력>"              # 노트 자동 추출(df≥85%, 실패 유닛, load…)
+vssh memory ask "ollama 도는 노드"                  # 자연어 질의
+```
+
+**Intent** — 평문 요청 → 명령 계획(내장 23개: disk/log/service/gpu/process/…).
+기본은 계획만, `--run`은 `--target` 필요. `~/.vssh/intents.json`로 재정의/추가:
+
+```bash
+vssh intent "disk check"                            # 계획만 출력
+vssh intent "service check nginx" --target d1 --run # 계획 + d1에서 실행
+vssh intent "gpu status" --target g1 --run --json   # 구조화 출력
+```
+
+**Workflow** — 분기 있는 사전정의 다단계 플레이북. 스텝별 `on_fail`은
+`abort` | `continue` | `<step-id>`(점프); 실행 기록은 `~/.vssh/workflow_runs/`.
+내장: `service-restart`(파라미터 `service`), `health-check`, `disk-cleanup`,
+`log-collect`. 커스텀은 `~/.vssh/workflows/*.json`:
+
+```bash
+vssh workflow list                                  # 내장 + 사용자 JSON
+vssh workflow run health-check --target d1
+vssh workflow run service-restart --target d1 --param service=nginx
+vssh workflow run disk-cleanup --target d1 --dry-run   # 실행 없이 계획만
+vssh workflow status <run-id>                       # 과거 실행 재생
+```
+
+**Diff** — append-only 감사 로그를 "무엇을 했는지" 사람 언어로 변환. 명령을
+운영 세션으로 그룹핑(같은 key+엔드포인트, 5분 갭)하고 before/after는 명령
+텍스트에서 추론(로그엔 출력이 아닌 명령만 저장 —
+`sed -i 's/listen 80/…/'` → `listen 80 → 443`):
+
+```bash
+vssh diff                                           # 로컬 데몬 감사 로그
+vssh diff --node d1 --since 2h                      # d1에서 최근 바뀐 것
+vssh diff --last 5 --json                           # 최신 5세션, 구조화
+```
+
 ## 5. 보안과 환경변수
 
 | 변수 | 효과 |
