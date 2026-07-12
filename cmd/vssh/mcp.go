@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/zeus-kim/vssh/internal/server"
 )
 
 // MCP Protocol structures
@@ -137,6 +139,12 @@ type RouteDecision struct {
 }
 
 func cmdMcp() {
+	// The MCP server is long-lived and an agent makes many exec calls through it;
+	// reuse one authenticated MUX session per host so calls 2..N skip the
+	// connect+TLS+VAUTH handshake (ssh-ControlMaster-style). Safe: every command
+	// is still policy-checked and audited under the session's authenticated key.
+	server.EnablePersistentExec()
+
 	scanner := bufio.NewScanner(os.Stdin)
 	// Allow large tool-call request lines (file/script payloads) — a strict MCP
 	// client (Cursor/Codex/custom) may send >64KB JSON; the default scanner caps

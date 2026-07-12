@@ -15,22 +15,30 @@ import (
 // auditLogPath resolves (once) the destination for the daemon audit trail:
 // a system path when running as root, else the user's ~/.vssh, else /tmp.
 func auditLogPath() string {
-	auditPathOnce.Do(func() {
-		var candidates []string
-		if os.Geteuid() == 0 {
-			candidates = append(candidates, "/var/log/vssh")
+	home, _ := os.UserHomeDir()
+	auditPathMu.Lock()
+	defer auditPathMu.Unlock()
+	// Cache the resolved path, but re-resolve if HOME changed since — a no-op in
+	// production (HOME is stable) that keeps in-process tests, which swap HOME
+	// per case, from all writing to the first test's now-deleted directory.
+	if auditPathCache != "" && home == auditPathHome {
+		return auditPathCache
+	}
+	var candidates []string
+	if os.Geteuid() == 0 {
+		candidates = append(candidates, "/var/log/vssh")
+	}
+	if home != "" {
+		candidates = append(candidates, filepath.Join(home, ".vssh"))
+	}
+	candidates = append(candidates, "/tmp/vssh")
+	for _, dir := range candidates {
+		if os.MkdirAll(dir, 0700) == nil {
+			auditPathCache = filepath.Join(dir, "audit.log")
+			auditPathHome = home
+			return auditPathCache
 		}
-		if home, err := os.UserHomeDir(); err == nil && home != "" {
-			candidates = append(candidates, filepath.Join(home, ".vssh"))
-		}
-		candidates = append(candidates, "/tmp/vssh")
-		for _, dir := range candidates {
-			if os.MkdirAll(dir, 0700) == nil {
-				auditPathCache = filepath.Join(dir, "audit.log")
-				return
-			}
-		}
-	})
+	}
 	return auditPathCache
 }
 

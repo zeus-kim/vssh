@@ -480,8 +480,9 @@ func classifyDialError(err error) (string, bool) {
 }
 
 var (
-	auditPathOnce  sync.Once
+	auditPathMu    sync.Mutex
 	auditPathCache string
+	auditPathHome  string // HOME the cache was resolved under; re-resolve if it changes
 )
 
 var (
@@ -501,6 +502,15 @@ func ExecCommandStructured(host string, port int, secret, command string) (ExecC
 func ExecCommandStructuredTimeout(host string, port int, secret, command string, deadline time.Duration) (ExecCommandResult, error) {
 	if deadline <= 0 {
 		deadline = 30 * time.Second
+	}
+
+	// Fast path for long-lived processes: reuse one authenticated MUX session
+	// per host (skips TLS+VAUTH on the 2nd+ call). usable=false means the daemon
+	// has no MUX; fall through to a one-shot connection below.
+	if persistentExec.Load() {
+		if res, usable, merr := execViaMux(host, port, secret, command, deadline); usable {
+			return res, merr
+		}
 	}
 
 	conn, reader, err := dialAuth(host, port, secret, deadline)
