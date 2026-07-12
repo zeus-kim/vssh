@@ -17,7 +17,9 @@ func memoryUsage() {
   vssh memory note <node> <text>
   vssh memory find [--role=R] [--tag=T] [--service=S] [query]
   vssh memory auto-note <node> [output]   (reads stdin if output omitted)
-  vssh memory ask <query>`)
+  vssh memory ask <query>
+  vssh memory discover [nodes...] [--apply]   auto-detect role/services/tags from
+                                              what each node actually runs`)
 }
 
 func cmdMemory(args []string) {
@@ -38,6 +40,8 @@ func cmdMemory(args []string) {
 		cmdMemoryAutoNote(args[1:])
 	case "ask":
 		cmdMemoryAsk(args[1:])
+	case "discover":
+		cmdMemoryDiscover(args[1:])
 	default:
 		memoryUsage()
 		os.Exit(1)
@@ -128,14 +132,28 @@ func cmdMemoryNote(args []string) {
 func cmdMemoryFind(args []string) {
 	var f fleet.FleetFilter
 	var text []string
-	for _, a := range args {
+	// Index-based so each filter accepts both "--role gpu" and "--role=gpu",
+	// matching `vssh intent`/`workflow`/`diff`.
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		value := func(name string) string {
+			if strings.HasPrefix(a, name+"=") {
+				return strings.TrimPrefix(a, name+"=")
+			}
+			if i+1 >= len(args) {
+				fmt.Fprintf(os.Stderr, "vssh: %s needs a value\n", name)
+				os.Exit(1)
+			}
+			i++
+			return args[i]
+		}
 		switch {
-		case strings.HasPrefix(a, "--role="):
-			f.Role = strings.TrimPrefix(a, "--role=")
-		case strings.HasPrefix(a, "--tag="):
-			f.Tag = strings.TrimPrefix(a, "--tag=")
-		case strings.HasPrefix(a, "--service="):
-			f.Service = strings.TrimPrefix(a, "--service=")
+		case a == "--role" || strings.HasPrefix(a, "--role="):
+			f.Role = value("--role")
+		case a == "--tag" || strings.HasPrefix(a, "--tag="):
+			f.Tag = value("--tag")
+		case a == "--service" || strings.HasPrefix(a, "--service="):
+			f.Service = value("--service")
 		case strings.HasPrefix(a, "--"):
 			fmt.Fprintf(os.Stderr, "vssh: unknown flag %q\n", a)
 			memoryUsage()

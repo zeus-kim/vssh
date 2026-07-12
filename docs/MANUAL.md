@@ -121,7 +121,21 @@ vssh memory note d1 "swapped to 550W PSU"           # timestamped event note
 vssh memory find --role gpu --tag prod [query]      # filter/search nodes
 vssh memory auto-note d1 "<command output>"         # extract notes (df≥85%, failed units, load…)
 vssh memory ask "which nodes run ollama"            # natural-language query
+vssh memory discover                                # auto-detect the whole fleet (plan)
+vssh memory discover --apply                        # …and write it
 ```
+
+**Discovery is the point**: `memory discover` probes every known peer in parallel
+and infers what each node *is* from what it actually *runs* — GPUs (`nvidia-smi`,
+model → `rtx4090` tag), running units, listening ports, containers, disk — so
+nobody hand-maintains an inventory. It plans by default and only writes with
+`--apply`; **notes are preserved**, only `role`/`services`/`tags` are re-derived.
+Roles: `gpu` (any GPU) → `mail` (a mail daemon or ≥2 of :25/:587/:993, so a
+box idling on a local MTA isn't mislabelled) → `storage` (≥2 TB) → `network`
+(proxy) → `vm`. This is what keeps the `@role`/`@tag`/`@service` selectors below
+true to the fleet, and `scripts/refresh_fleet_state.sh` re-runs it on the
+scheduler (every 6–12h, `DISCOVER=0` to opt out) — so the selectors stay correct
+with zero upkeep as nodes change job.
 
 **Intent** — a plain-language request → a command plan (23 built-ins:
 disk/log/service/gpu/process/memory/network/…). Plans by default; `--run` needs

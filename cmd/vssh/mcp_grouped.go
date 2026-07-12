@@ -48,6 +48,7 @@ func groupActions() map[string]map[string]string {
 		"vssh_memory": {
 			"get": "vssh_memory_get", "set": "vssh_memory_set", "note": "vssh_memory_note",
 			"auto_note": "vssh_memory_auto_note", "find": "vssh_memory_find", "ask": "vssh_memory_ask",
+			"discover": "vssh_memory_discover",
 		},
 		"vssh_workflow": {
 			"list": "vssh_workflow_list", "run": "vssh_workflow_run", "status": "vssh_workflow_status",
@@ -114,7 +115,7 @@ func groupedMCPTools() []Tool {
 		group("vssh_transport", "Collect file/dir evidence or port-forward. Set action.", "artifact_collect | tunnel", "vssh_artifact_collect", "vssh_tunnel"),
 		group("vssh_route", "Path selection and advisory policy check. Set action.", "select | policy_check", "vssh_route_select", "vssh_policy_check"),
 		group("vssh_config", "Local config; writes require VSSH_ALLOW_CONFIG_WRITE. Set action.", "list | authorize_key | revoke_key | set_node | pin_node", "vssh_config_list", "vssh_config_authorize_key", "vssh_config_revoke_key", "vssh_config_set_node", "vssh_config_pin_node"),
-		group("vssh_memory", "Fleet memory (per-node role/services/tags/notes). Set action.", "get | set | note | auto_note | find | ask", "vssh_memory_get", "vssh_memory_set", "vssh_memory_note", "vssh_memory_auto_note", "vssh_memory_find", "vssh_memory_ask"),
+		group("vssh_memory", "Fleet memory (per-node role/services/tags/notes). Set action. 'discover' auto-detects role/services/tags by probing what each node actually runs (GPUs, running units, listening ports, containers); pass apply=true to write it.", "get | set | note | auto_note | find | ask | discover", "vssh_memory_get", "vssh_memory_set", "vssh_memory_note", "vssh_memory_auto_note", "vssh_memory_find", "vssh_memory_ask", "vssh_memory_discover"),
 		group("vssh_workflow", "Predefined multi-step workflows. Set action.", "list | run | status", "vssh_workflow_list", "vssh_workflow_run", "vssh_workflow_status"),
 	}
 	for _, n := range []string{"vssh_fleet_state", "vssh_intent", "vssh_diff"} {

@@ -92,6 +92,17 @@ func getMCPTools() []Tool {
 			},
 		},
 		{
+			Name:        "vssh_memory_discover",
+			Description: "Auto-detect each node's role/services/tags by probing what it ACTUALLY runs (GPUs via nvidia-smi, running systemd units, listening ports, containers, disk size) — no hand-maintained inventory. Plans by default; apply=true writes fleet memory (notes are preserved). Feeds the @role/@tag/@service selectors.",
+			InputSchema: InputSchema{
+				Type: "object",
+				Properties: map[string]Property{
+					"target": {Type: "string", Description: "comma-separated nodes to probe; omit to probe every known peer"},
+					"apply":  {Type: "boolean", Description: "write the inferred role/services/tags into fleet memory", Default: false},
+				},
+			},
+		},
+		{
 			Name:        "vssh_diff",
 			Description: "Summarize what was done: parse the daemon audit log into operator sessions, each with the commands run, inferred before/after detail (e.g. 'nginx.conf changed (listen 80 → 443)'), and a one-line natural summary. node omitted = local daemon log.",
 			InputSchema: InputSchema{
