@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/zeus-kim/vssh/internal/intent"
@@ -70,27 +71,65 @@ func cmdIntent(args []string) {
 		return
 	}
 
-	results := runPlan(target, plan.Commands)
+	targets, err := resolveTargets(target)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "vssh: %v\n", err)
+		os.Exit(1)
+	}
+	nodes := runPlanMulti(targets, plan.Commands)
 	if jsonOut {
-		printJSON(map[string]interface{}{"plan": plan, "target": target, "results": results})
+		printJSON(map[string]interface{}{"plan": plan, "targets": targets, "nodes": nodes})
 		return
 	}
-	fmt.Printf("intent: %s on %s\n", plan.Intent, target)
-	for _, r := range results {
-		fmt.Printf("$ %s\n", r.Command)
-		if r.Stdout != "" {
-			fmt.Print(r.Stdout)
-			if !strings.HasSuffix(r.Stdout, "\n") {
-				fmt.Println()
+	fmt.Printf("intent: %s → %s\n", plan.Intent, strings.Join(targets, ", "))
+	for _, nr := range nodes {
+		if len(nodes) > 1 {
+			fmt.Printf("\n=== %s ===\n", nr.Node)
+		}
+		for _, r := range nr.Results {
+			fmt.Printf("$ %s\n", r.Command)
+			if r.Stdout != "" {
+				fmt.Print(r.Stdout)
+				if !strings.HasSuffix(r.Stdout, "\n") {
+					fmt.Println()
+				}
+			}
+			if r.Stderr != "" {
+				fmt.Fprint(os.Stderr, r.Stderr)
+			}
+			if r.Error != "" {
+				fmt.Fprintf(os.Stderr, "[error] %s\n", r.Error)
 			}
 		}
-		if r.Stderr != "" {
-			fmt.Fprint(os.Stderr, r.Stderr)
-		}
-		if r.Error != "" {
-			fmt.Fprintf(os.Stderr, "[error] %s\n", r.Error)
-		}
 	}
+}
+
+// nodePlanResult is one node's outcome when a plan runs across a target set.
+type nodePlanResult struct {
+	Node    string           `json:"node"`
+	Results []planStepResult `json:"results"`
+}
+
+// runPlanMulti runs the same plan on every target in parallel, returning one
+// result block per node (order preserved). This is the fleet-scale path: an
+// operator or agent asks once ("gpu status" on @gpu) and gets structured
+// per-node outcomes instead of looping ssh across hosts and scraping text.
+func runPlanMulti(targets []string, commands []string) []nodePlanResult {
+	out := make([]nodePlanResult, len(targets))
+	sem := make(chan struct{}, normalizedMaxParallelism(defaultMaxParallelism(), len(targets)))
+	var wg sync.WaitGroup
+	for i, t := range targets {
+		i, t := i, t
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			out[i] = nodePlanResult{Node: t, Results: runPlan(t, commands)}
+		}()
+	}
+	wg.Wait()
+	return out
 }
 
 type planStepResult struct {
@@ -152,9 +191,16 @@ func toolIntent(args map[string]interface{}) map[string]interface{} {
 			payload["error"] = map[string]interface{}{"code": "missing_argument", "message": "execute=true requires target"}
 			return payload
 		}
+		targets, err := resolveTargets(target)
+		if err != nil {
+			payload["success"] = false
+			payload["error"] = map[string]interface{}{"code": "bad_target", "message": err.Error()}
+			return payload
+		}
 		payload["executed"] = true
 		payload["target"] = target
-		payload["results"] = runPlan(target, plan.Commands)
+		payload["targets"] = targets
+		payload["nodes"] = runPlanMulti(targets, plan.Commands)
 	}
 	return payload
 }

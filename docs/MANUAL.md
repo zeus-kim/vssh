@@ -133,6 +133,25 @@ vssh intent "service check nginx" --target d1 --run # plan + run on d1
 vssh intent "gpu status" --target g1 --run --json   # structured output
 ```
 
+`--target` is a **fleet selector**: a comma-separated mix of literal hosts and
+memory-backed selectors, run in parallel with results returned per node — one
+request fans out across the fleet instead of a shell loop over ssh:
+
+| Selector | Expands to |
+| --- | --- |
+| `d1,g1` | those literal hosts |
+| `@gpu` | every node whose role **or** tag **or** service is `gpu` |
+| `@role:gpu` · `@tag:prod` · `@service:ollama` | that one facet |
+| `@all` | every node in fleet memory |
+
+```bash
+vssh intent "gpu status" --target @gpu --run        # every GPU box, in parallel
+vssh intent "disk check" --target @tag:prod --run --json   # per-node JSON
+```
+
+The same selector works from MCP (`vssh_intent` `target`), returning a `nodes`
+array of per-node results — so an agent audits the whole fleet in one call.
+
 **Workflow** — predefined multi-step playbooks with branching. `on_fail` per
 step is `abort` | `continue` | `<step-id>` (jump); runs are recorded under
 `~/.vssh/workflow_runs/`. Built-ins: `service-restart` (param `service`),

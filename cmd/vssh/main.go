@@ -166,7 +166,9 @@ Usage:
   vssh memory find [--role=R] [--tag=T] [--service=S] [query]  Filter/search nodes
   vssh memory auto-note <node> [output]  Extract notes from command output
   vssh memory ask <query>     Natural-language fleet memory query
-  vssh intent "<request>" [--target <host>] [--run]  NL request → command plan (optionally run)
+  vssh intent "<request>" [--target <sel>] [--run]  NL request → command plan (optionally run)
+                              --target takes hosts or fleet selectors:
+                              d1,g1 | @gpu | @role:gpu | @tag:prod | @service:ollama | @all
   vssh workflow list          List predefined multi-step workflows
   vssh workflow run <name> --target <host> [--param k=v] [--dry-run]  Run a workflow
   vssh workflow status <run-id>  Show a past workflow run
@@ -185,6 +187,7 @@ Examples:
 	vssh put file.tar web1:/tmp/   # Upload file
   vssh get web1:/var/log/x .     # Download file
   vssh intent "disk check" --target d1 --run   # NL → plan → run
+  vssh intent "gpu status" --target @gpu --run # fan out across every gpu node
   vssh workflow run service-restart --target d1 --param service=nginx
   vssh diff --node d1 --since 2h  # What changed on d1 in the last 2h
 

@@ -110,7 +110,7 @@ func getMCPTools() []Tool {
 				Type: "object",
 				Properties: map[string]Property{
 					"query":   {Type: "string", Description: "natural-language request, e.g. 'disk check' or 'service check nginx'"},
-					"target":  {Type: "string", Description: "node to run on (required when execute=true)"},
+					"target":  {Type: "string", Description: "where to run (required when execute=true). Comma-separated hosts and/or fleet-memory selectors: '@gpu' (role/tag/service), '@role:gpu', '@tag:prod', '@service:ollama', '@all'. Runs in parallel; per-node results are returned under 'nodes'."},
 					"execute": {Type: "boolean", Description: "run the planned commands on target instead of only planning", Default: false},
 				},
 				Required: []string{"query"},

@@ -130,6 +130,25 @@ vssh intent "service check nginx" --target d1 --run # 계획 + d1에서 실행
 vssh intent "gpu status" --target g1 --run --json   # 구조화 출력
 ```
 
+`--target`는 **플릿 셀렉터** — 리터럴 호스트와 메모리 기반 셀렉터를 콤마로 섞어
+쓰며, 병렬 실행 후 노드별로 결과를 돌려준다. ssh를 셸 루프로 도는 대신 한 요청이
+플릿 전체로 팬아웃:
+
+| 셀렉터 | 확장 대상 |
+| --- | --- |
+| `d1,g1` | 해당 리터럴 호스트 |
+| `@gpu` | role **또는** tag **또는** service가 `gpu`인 모든 노드 |
+| `@role:gpu` · `@tag:prod` · `@service:ollama` | 해당 한 축 |
+| `@all` | 플릿 메모리의 모든 노드 |
+
+```bash
+vssh intent "gpu status" --target @gpu --run        # 모든 GPU 노드 병렬
+vssh intent "disk check" --target @tag:prod --run --json   # 노드별 JSON
+```
+
+같은 셀렉터가 MCP(`vssh_intent`의 `target`)에서도 동작하며 노드별 결과를 `nodes`
+배열로 반환 — 에이전트가 한 콜로 플릿 전체를 점검한다.
+
 **Workflow** — 분기 있는 사전정의 다단계 플레이북. 스텝별 `on_fail`은
 `abort` | `continue` | `<step-id>`(점프); 실행 기록은 `~/.vssh/workflow_runs/`.
 내장: `service-restart`(파라미터 `service`), `health-check`, `disk-cleanup`,
