@@ -77,25 +77,37 @@ func PeerPubB64(cs tls.ConnectionState) string {
 	return base64.StdEncoding.EncodeToString(pub)
 }
 
-// ServerTLSConfig is the daemon-side config: TLS 1.3 only, no resumption
-// tickets, ALPN vssh/1. A client certificate is requested but not required
-// (during migration identity may still come from the in-band VAUTH1 line,
-// now confidential inside the channel). When a client cert IS presented it
-// must be a parseable Ed25519 cert; authorization (authorized_keys) is
-// checked by the caller against PeerPubB64.
+// ServerTLSConfig is the daemon-side config: TLS 1.3 only, ALPN vssh/1, with
+// session-resumption tickets ENABLED so a client making repeated connections
+// (an AI agent's tool loop, a fleet fan-out) skips the full asymmetric
+// handshake on the 2nd+ connection. Resumption never weakens authorization:
+// every connection still runs a fresh in-band VAUTH1 challenge–response
+// (per-node Ed25519, server nonce, no replay); the TLS ticket only elides the
+// key-exchange/cert cost, not identity. A client certificate is requested but
+// not required (identity may still come from the VAUTH1 line, confidential
+// inside the channel); when a cert IS presented it must be a parseable Ed25519
+// cert cross-checked against the VAUTH1 key by handleConnection. Go rotates the
+// ticket key automatically and TLS 1.3 keeps forward secrecy (PSK + ECDHE).
 func ServerTLSConfig() (*tls.Config, error) {
 	cert, err := IdentityCertificate()
 	if err != nil {
 		return nil, err
 	}
 	return &tls.Config{
-		Certificates:           []tls.Certificate{cert},
-		MinVersion:             tls.VersionTLS13,
-		SessionTicketsDisabled: true,
-		NextProtos:             []string{vsshALPN},
-		ClientAuth:             tls.RequestClientCert,
+		Certificates: []tls.Certificate{cert},
+		MinVersion:   tls.VersionTLS13,
+		NextProtos:   []string{vsshALPN},
+		ClientAuth:   tls.RequestClientCert,
 	}, nil
 }
+
+// clientSessionCache is process-wide so a long-lived client (the `vssh mcp`
+// server, or one CLI process fanning out across the fleet) reuses TLS tickets
+// across dials. Go keys entries by ServerName, falling back to the dial address
+// when ServerName is empty (our case) — so a ticket is only ever offered back
+// to the same host:port it came from. Empty/one-shot CLI processes simply never
+// get a cache hit and pay the full handshake, exactly as before.
+var clientSessionCache = tls.NewLRUClientSessionCache(256)
 
 // ClientTLSConfig builds the dialing config. pinnedPubB64, when non-empty,
 // hard-pins the daemon's Ed25519 key (known_hosts hit); when empty the
@@ -111,7 +123,8 @@ func ClientTLSConfig(pinnedPubB64 string) (*tls.Config, error) {
 		Certificates:       []tls.Certificate{cert},
 		MinVersion:         tls.VersionTLS13,
 		NextProtos:         []string{vsshALPN},
-		InsecureSkipVerify: true, // trust = raw-key pin below, not WebPKI
+		ClientSessionCache: clientSessionCache, // resume across dials (skip full handshake)
+		InsecureSkipVerify: true,               // trust = raw-key pin below, not WebPKI
 		VerifyPeerCertificate: func(rawCerts [][]byte, _ [][]*x509.Certificate) error {
 			if len(rawCerts) == 0 {
 				return errors.New("vtls: daemon sent no certificate")

@@ -25,6 +25,15 @@ import (
 // and the legacy token were refused), as opposed to a transport failure.
 var ErrAuthFailed = errors.New("auth failed")
 
+// transferBufSize is the copy-buffer size for bulk file streaming. 256 KiB lets
+// the TLS layer batch many records per syscall, keeping high-bandwidth·high-
+// latency links (e.g. cross-internet nodes) filled where the default 32 KiB
+// io.Copy buffer leaves the pipe under-fed. Local links are already at line
+// rate, so this only helps the long-fat paths. MultiWriter (used at every call
+// site, for inline hashing) hides the ReadFrom/WriteTo fast paths, so the
+// buffer size actually takes effect.
+const transferBufSize = 256 * 1024
+
 // dialAuth dials a daemon and authenticates with the VAUTH1 Ed25519
 // challenge-response (per-node key + server nonce: no shared secret, no
 // replay). The legacy shared-HMAC fallback was removed in 0.7.25 (design doc
@@ -80,22 +89,32 @@ func dialAuth(host string, port int, secret string, dialTimeout time.Duration) (
 		herr := tconn.Handshake()
 		if herr == nil {
 			tconn.SetDeadline(time.Time{})
-			// Host-identity verification (opt-in): refuse to proceed if the
-			// reached daemon key differs from the one EXPECTED for the logical
-			// target (set by the caller from the target's canonical config-IP
-			// pin). Catches name->wrong-host misroutes (e.g. stale/colliding
-			// Tailscale address) that an IP-keyed pin alone cannot.
-			if os.Getenv("VSSH_NO_HOSTKEY_VERIFY") != "1" {
-				if exp := expectedKeyFor(host); exp != "" {
-					if got := PeerPubB64(tconn.ConnectionState()); got != exp {
-						tconn.Close()
-						return nil, nil, fmt.Errorf("host identity mismatch for %s: reached daemon key %s, expected %s — refusing to run on the wrong host", host, got, exp)
+			cs := tconn.ConnectionState()
+			// A resumed TLS 1.3 session carries NO peer certificate: identity was
+			// verified, pinned, and recorded on the original full handshake that
+			// issued the ticket (and Go only offers a ticket back to the same
+			// host it came from). Re-checking here would read an empty key —
+			// false-mismatching a pinned host and clobbering known_hosts with "".
+			// So the pin/TOFU logic runs on full handshakes only; VAUTH1 below
+			// still authenticates every connection, resumed or not.
+			if !cs.DidResume {
+				// Host-identity verification (opt-in): refuse to proceed if the
+				// reached daemon key differs from the one EXPECTED for the logical
+				// target (set by the caller from the target's canonical config-IP
+				// pin). Catches name->wrong-host misroutes (e.g. stale/colliding
+				// Tailscale address) that an IP-keyed pin alone cannot.
+				if os.Getenv("VSSH_NO_HOSTKEY_VERIFY") != "1" {
+					if exp := expectedKeyFor(host); exp != "" {
+						if got := PeerPubB64(cs); got != exp {
+							tconn.Close()
+							return nil, nil, fmt.Errorf("host identity mismatch for %s: reached daemon key %s, expected %s — refusing to run on the wrong host", host, got, exp)
+						}
 					}
 				}
-			}
-			if pinned == "" {
-				// TOFU: record the daemon key on first contact.
-				RecordKnownHost(host, PeerPubB64(tconn.ConnectionState()))
+				if pinned == "" {
+					// TOFU: record the daemon key on first contact.
+					RecordKnownHost(host, PeerPubB64(cs))
+				}
 			}
 			return vauth1(tconn, priv, pub, authDeadline)
 		}
@@ -180,7 +199,7 @@ func SendFile(host string, port int, secret, localPath, remotePath string) error
 
 	// Send file data, hashing as we go for end-to-end integrity.
 	h := md5.New()
-	n, err := io.Copy(io.MultiWriter(conn, h), f)
+	n, err := io.CopyBuffer(io.MultiWriter(conn, h), f, make([]byte, transferBufSize))
 	if err != nil {
 		return err
 	}
@@ -246,7 +265,10 @@ func RecvFile(host string, port int, secret, remotePath, localPath string) error
 
 	// Receive data (use reader to handle buffered data), hashing as we go.
 	h := md5.New()
-	n, err := io.CopyN(io.MultiWriter(f, h), reader, size)
+	n, err := io.CopyBuffer(io.MultiWriter(f, h), io.LimitReader(reader, size), make([]byte, transferBufSize))
+	if err == nil && n < size {
+		err = io.ErrUnexpectedEOF
+	}
 	if err != nil {
 		f.Close()
 		os.Remove(tmp)
@@ -341,7 +363,10 @@ func HandleTransfer(conn net.Conn, cmd string) {
 		conn.Write([]byte("READY\n"))
 
 		h := md5.New()
-		n, err := io.CopyN(io.MultiWriter(f, h), conn, size)
+		n, err := io.CopyBuffer(io.MultiWriter(f, h), io.LimitReader(conn, size), make([]byte, transferBufSize))
+		if err == nil && n < size {
+			err = io.ErrUnexpectedEOF
+		}
 		if err != nil {
 			f.Close()
 			os.Remove(tmp)
@@ -387,7 +412,7 @@ func HandleTransfer(conn net.Conn, cmd string) {
 		// that doubled GET disk I/O in 0.7.7–0.7.13.
 		conn.Write([]byte(fmt.Sprintf("SIZE %d\n", stat.Size())))
 		h := md5.New()
-		io.Copy(io.MultiWriter(conn, h), f)
+		io.CopyBuffer(io.MultiWriter(conn, h), f, make([]byte, transferBufSize))
 		conn.Write([]byte(hex.EncodeToString(h.Sum(nil)) + "\n"))
 
 	case "EXE": // EXEC
