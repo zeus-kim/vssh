@@ -212,13 +212,24 @@ func headlineFor(cmd string) string {
 			return fmt.Sprintf("changed (%s → %s)", from, to)
 		}
 	}
-	if m := reTee.FindStringSubmatch(cmd); m != nil {
+	if m := reTee.FindStringSubmatch(cmd); m != nil && !isSink(m[1]) {
 		return fmt.Sprintf("%s written", filepath.Base(m[1]))
 	}
-	if m := reRedirect.FindStringSubmatch(cmd); m != nil {
-		return fmt.Sprintf("%s written", filepath.Base(m[1]))
+	// A command may hold several redirects (e.g. `cmd 2>/dev/null > out`); the
+	// first is often `2>/dev/null`, a discard — not a write. Report the first
+	// redirect whose target is a real file, skipping /dev sinks.
+	for _, m := range reRedirect.FindAllStringSubmatch(cmd, -1) {
+		if !isSink(m[1]) {
+			return fmt.Sprintf("%s written", filepath.Base(m[1]))
+		}
 	}
 	return ""
+}
+
+// isSink reports whether a redirect target is a null/device sink rather than a
+// real file, so `2>/dev/null` isn't misread as "null written".
+func isSink(target string) bool {
+	return target == "/dev/null" || strings.HasPrefix(target, "/dev/")
 }
 
 func firstPath(cmd string) string { return rePath.FindString(cmd) }

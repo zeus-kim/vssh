@@ -24,7 +24,7 @@ func builtinWorkflows() []Workflow {
 				{ID: "uptime", Cmd: "uptime", OnFail: "continue"},
 				{ID: "disk", Cmd: "df -h", OnFail: "continue"},
 				{ID: "memory", Cmd: "free -h 2>/dev/null || vm_stat", OnFail: "continue"},
-				{ID: "top", Cmd: "ps aux --sort=-%cpu | head -10", OnFail: "continue"},
+				{ID: "top", Cmd: "ps -eo pid,pcpu,pmem,comm 2>/dev/null | sort -k2 -nr | head -10", OnFail: "continue"},
 				{ID: "summary", Type: "summary"},
 			},
 		},

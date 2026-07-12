@@ -96,6 +96,22 @@ func TestHeadlineIgnoresSedLikePaths(t *testing.T) {
 	}
 }
 
+// `2>/dev/null` is a discard, not a file write — it must not produce a headline.
+func TestHeadlineIgnoresDevNullRedirect(t *testing.T) {
+	cmd := `echo "=== DISK ==="; df -h / 2>/dev/null | tail -n +1`
+	if h := headlineFor(cmd); h != "" {
+		t.Fatalf("/dev/null redirect mistaken for write: %q", h)
+	}
+}
+
+// A real write after a /dev/null discard should still be reported.
+func TestHeadlineReportsRealWritePastSink(t *testing.T) {
+	cmd := `command 2>/dev/null > /etc/motd`
+	if h := headlineFor(cmd); h != "motd written" {
+		t.Fatalf("real write past sink = %q, want \"motd written\"", h)
+	}
+}
+
 func TestHeadlineRealSedEdit(t *testing.T) {
 	h := headlineFor(`sed -i 's/listen 80/listen 443/' /etc/nginx/nginx.conf`)
 	if h != "nginx.conf changed (listen 80 → 443)" {
