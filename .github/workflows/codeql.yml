@@ -21,6 +21,13 @@ jobs:
     runs-on: [self-hosted, Linux, X64, docker, go-ci]
     steps:
       - uses: actions/checkout@v4
+      # autobuild shells out to `go`, so the toolchain must be on PATH before
+      # CodeQL starts tracing. Without this the job depends on whichever
+      # self-hosted runner it lands on having a system Go — it fails on the ones
+      # that don't. Same go-version-file the other workflows use.
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
       - uses: github/codeql-action/init@v3
         with:
           languages: go
