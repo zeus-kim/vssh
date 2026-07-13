@@ -111,6 +111,8 @@ func main() {
 		cmdIntent(os.Args[2:])
 	case "workflow", "wf":
 		cmdWorkflow(os.Args[2:])
+	case "fleet-health", "health":
+		cmdFleetHealth(os.Args[2:])
 	case "agent":
 		cmdAgent(os.Args[2:])
 	case "version", "-v", "--version":
@@ -173,6 +175,8 @@ Usage:
   vssh workflow run <name> --target <host> [--param k=v] [--dry-run]  Run a workflow
   vssh workflow status <run-id>  Show a past workflow run
   vssh diff [--node <host>] [--last N] [--since 1h]  Human summary of audit-log changes
+  vssh fleet-health [nodes...] [--json]  Worst-first health of the fleet
+                              (down nodes, disk pressure, load, failed units)
 
 Examples:
   vssh server                    # Start server on :48291

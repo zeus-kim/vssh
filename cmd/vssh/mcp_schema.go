@@ -92,6 +92,16 @@ func getMCPTools() []Tool {
 			},
 		},
 		{
+			Name:        "vssh_fleet_health",
+			Description: "Worst-first health of the whole fleet in one call: probes every node in parallel and flags down nodes, disk pressure (>=90/95%), high load (per-core >=2/4), memory pressure, and failed systemd units. Returns per-node severity+reasons and a summary count. target omitted = all known peers.",
+			InputSchema: InputSchema{
+				Type: "object",
+				Properties: map[string]Property{
+					"target": {Type: "string", Description: "comma-separated nodes to check; omit to check every known peer"},
+				},
+			},
+		},
+		{
 			Name:        "vssh_memory_discover",
 			Description: "Auto-detect each node's role/services/tags by probing what it ACTUALLY runs (GPUs via nvidia-smi, running systemd units, listening ports, containers, disk size) — no hand-maintained inventory. Plans by default; apply=true writes fleet memory (notes are preserved). Feeds the @role/@tag/@service selectors.",
 			InputSchema: InputSchema{
