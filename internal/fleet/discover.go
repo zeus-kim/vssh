@@ -29,6 +29,9 @@ fi
   | awk '{print $4}' | sed 's/.*[:.]//' | grep -E '^[0-9]+$' | sort -un | awk '{print "port="$1}'
 if command -v docker >/dev/null 2>&1; then echo "containers=$(docker ps -q 2>/dev/null | wc -l | tr -d ' ')"; fi
 echo "disk_gb=$(df -k / 2>/dev/null | tail -1 | awk '{printf "%d", $2/1048576}')"
+# Largest single real filesystem — a NAS/storage box has its bulk on a data
+# volume (/volume1, /mnt/...), not on a small root, so root size alone misses it.
+echo "bigdisk_gb=$(df -k -x tmpfs -x devtmpfs -x overlay -x squashfs 2>/dev/null | awk 'NR>1{if($2>m)m=$2}END{printf "%d", m/1048576}')"
 `
 
 // Signals is the parsed result of ProbeCommand.
@@ -40,7 +43,8 @@ type Signals struct {
 	Units      []string // running systemd service units
 	Ports      []int    // listening TCP ports
 	Containers int
-	DiskGB     int
+	DiskGB     int // root filesystem size
+	BigDiskGB  int // largest single real filesystem (data volume on a NAS)
 }
 
 // ParseSignals reads the probe's key=value output.
@@ -70,6 +74,8 @@ func ParseSignals(out string) Signals {
 			s.Containers, _ = strconv.Atoi(v)
 		case "disk_gb":
 			s.DiskGB, _ = strconv.Atoi(v)
+		case "bigdisk_gb":
+			s.BigDiskGB, _ = strconv.Atoi(v)
 		}
 	}
 	return s
@@ -91,6 +97,9 @@ var serviceRules = []struct {
 	{"mysql", []string{"mysql", "mariadb"}, []int{3306}},
 	{"redis", []string{"redis"}, []int{6379}},
 	{"mail", []string{"mox", "postfix", "dovecot", "exim"}, []int{25, 587, 993}},
+	{"samba", []string{"smbd", "samba"}, []int{445}},
+	{"nfs", []string{"nfs-server", "nfsd", "nfs-kernel"}, []int{2049}},
+	{"minio", []string{"minio"}, []int{9000}},
 	{"prometheus", []string{"prometheus"}, []int{9090}},
 	{"node_exporter", []string{"node_exporter", "node-exporter"}, []int{9100}},
 	{"grafana", []string{"grafana"}, []int{3000}},
@@ -164,13 +173,22 @@ func Infer(sig Signals) NodeMemory {
 	}
 	mailServer := mailUnit || mailPorts >= 2
 
+	// A storage box either serves files (samba/nfs/minio) or carries a large data
+	// volume — checked via the LARGEST filesystem, not root, so a NAS with a small
+	// system partition and huge /volume isn't missed.
+	biggest := sig.DiskGB
+	if sig.BigDiskGB > biggest {
+		biggest = sig.BigDiskGB
+	}
+	storageBox := has("samba") || has("nfs") || has("minio") || biggest >= 4000
+
 	// Role: what the box is FOR, judged by its dominant workload.
 	switch {
 	case len(sig.GPUs) > 0:
 		m.Role = "gpu"
 	case mailServer:
 		m.Role = "mail"
-	case sig.DiskGB >= 2000:
+	case storageBox:
 		m.Role = "storage"
 	case has("squid") || has("haproxy"):
 		m.Role = "network"

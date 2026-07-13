@@ -93,10 +93,16 @@ func TestInferGPUOutranksOthers(t *testing.T) {
 }
 
 func TestInferStorageAndPlainVM(t *testing.T) {
-	if m := Infer(Signals{OS: "Linux", DiskGB: 8000}); m.Role != "storage" {
-		t.Fatalf("big-disk role = %q, want storage", m.Role)
+	// A NAS: small system root but a large data volume (BigDiskGB) → storage.
+	if m := Infer(Signals{OS: "Linux", DiskGB: 12, BigDiskGB: 12000}); m.Role != "storage" {
+		t.Fatalf("big-volume NAS role = %q, want storage", m.Role)
 	}
-	if m := Infer(Signals{OS: "Linux", Arch: "aarch64", Units: []string{"vsshd"}}); m.Role != "vm" {
+	// A file server is storage by its service even without a huge disk.
+	if m := Infer(Signals{OS: "Linux", Ports: []int{445}}); m.Role != "storage" || !hasStr(m.Services, "samba") {
+		t.Fatalf("samba host = role %q services %v, want storage+samba", m.Role, m.Services)
+	}
+	// A plain box with a modest disk stays vm.
+	if m := Infer(Signals{OS: "Linux", Arch: "aarch64", DiskGB: 500, BigDiskGB: 500, Units: []string{"vsshd"}}); m.Role != "vm" {
 		t.Fatalf("plain role = %q, want vm", m.Role)
 	}
 }
