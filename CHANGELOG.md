@@ -4,6 +4,44 @@ Notable changes to **vssh**. Versioning is semantic-ish (`0.MINOR.PATCH`).
 
 ## [Unreleased]
 
+### Added
+- **Fleet selectors** — `vssh intent`/`vssh_intent` `--target` accepts memory-backed
+  selectors (`@gpu`, `@role:gpu`, `@tag:prod`, `@service:ollama`, `@all`) and
+  comma-separated hosts, run in parallel with per-node results. One request fans
+  out across the fleet instead of a shell loop over ssh.
+- **Auto-discovery** — `vssh memory discover [--apply]` infers each node's
+  role/services/tags from what it actually runs (GPUs, running units, listening
+  ports, containers, largest data volume). Rule-based, no LLM. Wired into
+  `refresh_fleet_state.sh` so the selectors stay current with no hand-maintenance.
+- **Persistent MUX exec pool** — the long-lived `vssh mcp` server reuses one
+  authenticated connection per host, so an agent's repeated calls skip the
+  TCP+TLS+VAUTH handshake (~1.4× faster). No daemon change; falls back to a
+  one-shot connection on any daemon without MUX.
+
+### Performance
+- **TLS 1.3 session resumption** — daemon issues resumption tickets and the client
+  caches them, so repeated connections from one process skip the full asymmetric
+  handshake. VAUTH1 still authenticates every connection.
+- **Larger transfer buffers** — file streaming uses a 256 KiB copy buffer so TLS
+  batches more per syscall on high-bandwidth·high-latency links.
+
+### Fixed
+- **diff false positives** — piped `... | sed 's/x/y/'` and `2>/dev/null` are no
+  longer misreported as file edits/writes; only in-place (`-i`) sed/perl edits
+  that name a file count as changes.
+- **MUX double-execution** — a reused session that times out mid-command is no
+  longer retried (the command may have run); only idle-closed sessions retry.
+- **Empty-selector footgun** — `@`, `@role:`, `@tag:`, `@service:` now error
+  instead of silently matching the entire fleet.
+- **Cross-platform commands** — built-in workflow/intent `ps` and flag parsing
+  (`--flag value` and `--flag=value`) work on macOS and Linux alike.
+
+### Changed
+- **Go toolchain 1.26.5** — patches `GO-2026-5856` in the standard-library
+  `crypto/tls`.
+- **Deploy transfer uses `scp -O`** — the legacy protocol so Synology/old-SFTP
+  nodes accept transfers; a no-op elsewhere.
+
 ### Documentation
 - **AI Runtime documentation** — new `docs/AI_RUNTIME.md` explaining Memory,
   Intent, Workflow, and Diff capabilities.
