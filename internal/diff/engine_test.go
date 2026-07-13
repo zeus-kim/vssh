@@ -112,6 +112,20 @@ func TestHeadlineReportsRealWritePastSink(t *testing.T) {
 	}
 }
 
+// A piped `... | sed 's/x/y/'` transforms a stream, it doesn't edit a file —
+// it must produce no "changed" headline. Regression for the garbage
+// "changed (.*[:.] → )" that the fleet-discovery probe command triggered.
+func TestHeadlinePipeSedIsNotAnEdit(t *testing.T) {
+	for _, cmd := range []string{
+		`ss -tlnH | awk '{print $4}' | sed 's/.*[:.]//' | sort -un`,
+		`cat /etc/passwd | sed 's/:/ /g'`,
+	} {
+		if h := headlineFor(cmd); h != "" {
+			t.Fatalf("pipe sed reported as edit: %q → %q", cmd, h)
+		}
+	}
+}
+
 func TestHeadlineRealSedEdit(t *testing.T) {
 	h := headlineFor(`sed -i 's/listen 80/listen 443/' /etc/nginx/nginx.conf`)
 	if h != "nginx.conf changed (listen 80 → 443)" {

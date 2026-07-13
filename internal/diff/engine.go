@@ -181,7 +181,8 @@ func parseRecords(r io.Reader) ([]Record, error) {
 
 var (
 	reSystemd  = regexp.MustCompile(`systemctl\s+(restart|start|stop|reload|enable|disable)\s+([\w.@-]+)`)
-	reEditor   = regexp.MustCompile(`\b(sed|perl|awk)\b`)
+	reEditor   = regexp.MustCompile(`\b(sed|perl)\b`)
+	reInPlace  = regexp.MustCompile(`(^|\s)-[a-zA-Z]*i|--in-place`) // -i / -ri / --in-place
 	reSedSub   = regexp.MustCompile(`\bs/([^/]+)/([^/]*)/`)
 	reTee      = regexp.MustCompile(`\btee\s+(?:-a\s+)?([^\s|;&]+)`)
 	reRedirect = regexp.MustCompile(`>>?\s*([^\s|;&>]+)`)
@@ -203,13 +204,16 @@ func headlineFor(cmd string) string {
 		}
 		return fmt.Sprintf("service %s %s", m[2], v)
 	}
-	if reEditor.MatchString(cmd) {
+	// A sed/perl substitution only CHANGES a file when it edits in place (-i) and
+	// names one; a piped `... | sed 's/x/y/'` merely transforms a stream and must
+	// not be reported as an edit (that produced garbage like "changed (.*[:.] → )"
+	// from probe commands). Both conditions required, and a real file path.
+	if reEditor.MatchString(cmd) && reInPlace.MatchString(cmd) {
 		if sm := reSedSub.FindStringSubmatch(cmd); sm != nil {
-			from, to := trimSharedPrefix(strings.TrimSpace(sm[1]), strings.TrimSpace(sm[2]))
 			if f := firstPath(cmd); f != "" {
+				from, to := trimSharedPrefix(strings.TrimSpace(sm[1]), strings.TrimSpace(sm[2]))
 				return fmt.Sprintf("%s changed (%s → %s)", filepath.Base(f), from, to)
 			}
-			return fmt.Sprintf("changed (%s → %s)", from, to)
 		}
 	}
 	if m := reTee.FindStringSubmatch(cmd); m != nil && !isSink(m[1]) {
