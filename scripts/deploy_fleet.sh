@@ -21,7 +21,11 @@ REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 STAMP="$(date +%Y%m%d)"
 NODES="${NODES:-node1 node2 node3}"
 SSH="ssh -o BatchMode=yes -o ConnectTimeout=8"
-SCP="scp -q -o BatchMode=yes -o ConnectTimeout=8"
+# -O forces the legacy SCP transfer protocol. Modern scp defaults to SFTP, which
+# fails on nodes whose SFTP subsystem is old/absent (e.g. Synology: "dest open
+# ...: No such file or directory"). -O is a client-side flag and harmless on
+# every other node, so it makes one deploy path cover the whole fleet.
+SCP="scp -O -q -o BatchMode=yes -o ConnectTimeout=8"
 
 BIN_LINUX_AMD64=/tmp/vssh-linux-amd64
 BIN_LINUX_ARM64=/tmp/vssh-linux-arm64
