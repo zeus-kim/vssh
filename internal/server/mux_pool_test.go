@@ -20,6 +20,7 @@ func startAuthorizedServer(t *testing.T) int {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
 	vd := filepath.Join(tmp, ".vssh")
+	t.Setenv("VSSH_AUDIT_DIR", vd) // isolate audit trail (root CI writes to /var/log/vssh otherwise)
 	if err := os.MkdirAll(vd, 0700); err != nil {
 		t.Fatal(err)
 	}

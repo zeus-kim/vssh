@@ -12,9 +12,15 @@ import (
 	"time"
 )
 
-// auditLogPath resolves (once) the destination for the daemon audit trail:
-// a system path when running as root, else the user's ~/.vssh, else /tmp.
+// auditLogPath resolves the destination for the daemon audit trail. An explicit
+// VSSH_AUDIT_DIR wins (ops pinning the location; tests isolating per-case);
+// otherwise a system path when running as root, else the user's ~/.vssh, else
+// /tmp. The result is cached, re-resolving only if the inputs change.
 func auditLogPath() string {
+	if d := os.Getenv("VSSH_AUDIT_DIR"); d != "" {
+		_ = os.MkdirAll(d, 0700)
+		return filepath.Join(d, "audit.log")
+	}
 	home, _ := os.UserHomeDir()
 	auditPathMu.Lock()
 	defer auditPathMu.Unlock()

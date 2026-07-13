@@ -20,6 +20,9 @@ func TestPolicyEnforcementE2E(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
 	vd := filepath.Join(tmp, ".vssh")
+	// Pin the audit trail into this test's dir; without it a root CI runner writes
+	// to the shared /var/log/vssh and the per-test audit assertion can't find it.
+	t.Setenv("VSSH_AUDIT_DIR", vd)
 	if err := os.MkdirAll(filepath.Join(vd, "policies"), 0700); err != nil {
 		t.Fatal(err)
 	}
