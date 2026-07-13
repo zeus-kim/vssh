@@ -70,7 +70,13 @@ func resolveTargetsWith(fm *fleet.FleetMemory, spec string) ([]string, error) {
 
 // expandSelector resolves a single '@' selector against fleet memory.
 func expandSelector(fm *fleet.FleetMemory, tok string) ([]string, error) {
-	sel := strings.ToLower(strings.TrimPrefix(tok, "@"))
+	sel := strings.ToLower(strings.TrimSpace(strings.TrimPrefix(tok, "@")))
+	// An empty selector value must NOT reach fm.Find: an empty filter field is
+	// "no filter", so `@`, `@role:`, `@tag:`, `@service:` would silently match
+	// the ENTIRE fleet — a dangerous footgun for a `--run`. Reject them.
+	if sel == "" {
+		return nil, fmt.Errorf("empty selector %q", tok)
+	}
 	if sel == "all" {
 		names := make([]string, 0, len(fm.Nodes))
 		for name := range fm.Nodes {
@@ -85,12 +91,19 @@ func expandSelector(fm *fleet.FleetMemory, tok string) ([]string, error) {
 
 	var matched []fleet.NodeMemory
 	switch {
-	case strings.HasPrefix(sel, "role:"):
-		matched = fm.Find(fleet.FleetFilter{Role: strings.TrimPrefix(sel, "role:")})
-	case strings.HasPrefix(sel, "tag:"):
-		matched = fm.Find(fleet.FleetFilter{Tag: strings.TrimPrefix(sel, "tag:")})
-	case strings.HasPrefix(sel, "service:"):
-		matched = fm.Find(fleet.FleetFilter{Service: strings.TrimPrefix(sel, "service:")})
+	case strings.HasPrefix(sel, "role:"), strings.HasPrefix(sel, "tag:"), strings.HasPrefix(sel, "service:"):
+		facet, val, _ := strings.Cut(sel, ":")
+		if val == "" {
+			return nil, fmt.Errorf("empty %s value in selector %q", facet, tok)
+		}
+		switch facet {
+		case "role":
+			matched = fm.Find(fleet.FleetFilter{Role: val})
+		case "tag":
+			matched = fm.Find(fleet.FleetFilter{Tag: val})
+		case "service":
+			matched = fm.Find(fleet.FleetFilter{Service: val})
+		}
 	default:
 		// Bare "@foo" is a convenience union: role OR tag OR service == foo.
 		nameSeen := map[string]bool{}

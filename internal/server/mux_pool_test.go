@@ -1,6 +1,8 @@
 package server
 
 import (
+	"errors"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -106,6 +108,35 @@ func TestPersistentExecPreservesResults(t *testing.T) {
 	r = mustExec(t, port, "/bin/echo ok")
 	if !r.Success || !strings.Contains(r.Stdout, "ok") {
 		t.Fatalf("stdout not preserved over mux: %q", r.Stdout)
+	}
+}
+
+// safeToRetry must never green-light re-running after a read TIMEOUT (the
+// command may have executed and only the reply was lost — double execution),
+// but should allow retry after an idle-close (EOF/reset, command never ran).
+func TestSafeToRetryNeverRetriesTimeout(t *testing.T) {
+	timeouts := []error{
+		errors.New("read tcp 1.2.3.4:5->6.7.8.9:10: i/o timeout"),
+		errors.New("context deadline exceeded"),
+	}
+	for _, e := range timeouts {
+		if safeToRetry(e) {
+			t.Fatalf("safeToRetry(%v) = true; a timed-out command must not be re-run", e)
+		}
+	}
+	idle := []error{
+		io.EOF,
+		errors.New("read tcp: connection reset by peer"),
+		errors.New("write: broken pipe"),
+		errors.New("use of closed network connection"),
+	}
+	for _, e := range idle {
+		if !safeToRetry(e) {
+			t.Fatalf("safeToRetry(%v) = false; an idle-closed session is safe to retry", e)
+		}
+	}
+	if safeToRetry(nil) {
+		t.Fatal("safeToRetry(nil) must be false")
 	}
 }
 

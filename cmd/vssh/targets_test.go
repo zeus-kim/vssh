@@ -72,3 +72,14 @@ func TestResolveUnknownSelectorErrors(t *testing.T) {
 		t.Fatal("expected error for empty spec")
 	}
 }
+
+// An empty selector value must ERROR, never silently expand to the whole fleet
+// (empty Find filters match every node — a dangerous footgun for --run).
+func TestResolveEmptySelectorDoesNotMatchAll(t *testing.T) {
+	for _, spec := range []string{"@", "@role:", "@tag:", "@service:", "@role: "} {
+		got, err := resolveTargetsWith(testFleet(), spec)
+		if err == nil {
+			t.Fatalf("selector %q expanded to %v instead of erroring", spec, got)
+		}
+	}
+}

@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
+	"io"
 	"net"
 	"strconv"
 	"strings"
@@ -35,6 +37,28 @@ type muxSession struct {
 	mu     sync.Mutex
 	conn   net.Conn
 	reader *bufio.Reader
+	noMux  bool // daemon answered without MUX_OK — stop probing, always one-shot
+}
+
+// safeToRetry reports whether a failed round-trip on a REUSED session can be
+// re-run without risking a double execution. Only a connection that was closed
+// BEFORE the daemon processed the command (idle-timeout: EOF / reset / broken
+// pipe / closed) is safe. A read TIMEOUT means the command may have executed and
+// only its reply was lost — re-running it could restart a service or rewrite a
+// file twice, so it is never retried.
+func safeToRetry(err error) bool {
+	if err == nil {
+		return false
+	}
+	s := err.Error()
+	if strings.Contains(s, "timeout") || strings.Contains(s, "deadline exceeded") {
+		return false
+	}
+	return errors.Is(err, io.EOF) ||
+		strings.Contains(s, "EOF") ||
+		strings.Contains(s, "connection reset") ||
+		strings.Contains(s, "broken pipe") ||
+		strings.Contains(s, "use of closed")
 }
 
 var (
@@ -68,6 +92,11 @@ func (s *muxSession) establish(host string, port int, secret string, deadline ti
 	conn.SetReadDeadline(time.Time{})
 	if rerr != nil || !strings.HasPrefix(line, "MUX_OK") {
 		conn.Close()
+		// A clean "no MUX_OK" reply (rerr==nil) means the daemon predates MUX;
+		// remember it so we don't pay a probe dial on every future exec.
+		if rerr == nil {
+			s.noMux = true
+		}
 		return false, nil
 	}
 	s.conn = conn
@@ -126,6 +155,10 @@ func execViaMux(host string, port int, secret, command string, deadline time.Dur
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	if s.noMux {
+		return ExecCommandResult{}, false, nil // known non-MUX daemon → one-shot
+	}
+
 	reused := s.conn != nil
 	if s.conn == nil {
 		hasMux, derr := s.establish(host, port, secret, deadline)
@@ -144,9 +177,10 @@ func execViaMux(host string, port int, secret, command string, deadline time.Dur
 	}
 
 	// The session failed. Drop it, and transparently retry once only if it was a
-	// reused (stale) session — see the retry-policy note above.
+	// reused session AND the failure is safe to re-run (idle close before the
+	// command was processed — never a read timeout, which may have executed it).
 	s.closeLocked()
-	if reused {
+	if reused && safeToRetry(rerr) {
 		if hasMux, derr := s.establish(host, port, secret, deadline); hasMux && derr == nil {
 			if res2, rerr2 := s.roundtrip(command, deadline); rerr2 == nil {
 				return res2, true, nil
