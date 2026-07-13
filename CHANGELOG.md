@@ -13,6 +13,10 @@ Notable changes to **vssh**. Versioning is semantic-ish (`0.MINOR.PATCH`).
   role/services/tags from what it actually runs (GPUs, running units, listening
   ports, containers, largest data volume). Rule-based, no LLM. Wired into
   `refresh_fleet_state.sh` so the selectors stay current with no hand-maintenance.
+- **Fleet health** — `vssh fleet-health`/`vssh_fleet_health` probes every node in
+  parallel and reports a worst-first summary: down nodes, disk pressure, high
+  per-core load, memory pressure, and failed systemd units, with the reason per
+  node.
 - **Persistent MUX exec pool** — the long-lived `vssh mcp` server reuses one
   authenticated connection per host, so an agent's repeated calls skip the
   TCP+TLS+VAUTH handshake (~1.4× faster). No daemon change; falls back to a
