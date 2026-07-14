@@ -126,12 +126,14 @@ func (c *Connector) Status() string {
 	})
 
 	onlineCount := 0
+	total := 0
 	now := time.Now().Unix()
 
 	for _, p := range sortedPeers {
 		if p.NodeName == "" {
 			continue
 		}
+		total++
 
 		name := p.NodeName
 		if len(name) > 8 {
@@ -185,7 +187,7 @@ func (c *Connector) Status() string {
 	}
 
 	sb.WriteString("\n")
-	sb.WriteString(fmt.Sprintf("  %s%d/%d online%s\n", Green, onlineCount, len(c.peers)-1, Reset))
+	sb.WriteString(fmt.Sprintf("  %s%d/%d online%s\n", Green, onlineCount, total, Reset))
 	sb.WriteString("\n")
 
 	return sb.String()
