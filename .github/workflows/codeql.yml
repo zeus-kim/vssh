@@ -10,25 +10,16 @@ permissions:
   contents: read
   security-events: write
 
-env:
-  GOPATH: /tmp/vssh-go
-  GOMODCACHE: /tmp/vssh-go/pkg/mod
-  GOCACHE: /tmp/vssh-go/build-cache
-  # Pin CodeQL's memory/threads: on some self-hosted runners its RAM auto-detect
-  # produced a negative value and analyze died with 'Invalid RAM setting "-69"'.
-  CODEQL_RAM: "6144"
-  CODEQL_THREADS: "4"
-
 jobs:
   analyze:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-    runs-on: [self-hosted, Linux, X64, docker, go-ci]
+    # GitHub-hosted: consistent RAM/toolchain. The self-hosted runner's memory
+    # auto-detect fed CodeQL bad values ("Invalid RAM setting -69", then
+    # "Evaluator heap must be at least 384 MiB"); a public repo gets hosted
+    # minutes free, so just run the analysis somewhere with sane memory.
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # autobuild shells out to `go`, so the toolchain must be on PATH before
-      # CodeQL starts tracing. Without this the job depends on whichever
-      # self-hosted runner it lands on having a system Go — it fails on the ones
-      # that don't. Same go-version-file the other workflows use.
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -37,6 +28,3 @@ jobs:
           languages: go
       - uses: github/codeql-action/autobuild@v3
       - uses: github/codeql-action/analyze@v3
-        with:
-          ram: 6144
-          threads: 4
