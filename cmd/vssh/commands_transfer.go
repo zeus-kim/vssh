@@ -118,6 +118,21 @@ func cmdDeployBinary(args []string) {
 			}
 		}
 	}
+	result := runDeployBinary(local, host, port, remotePath, service, mode, verify)
+	writeJSON(result)
+	if !result.Success {
+		os.Exit(1)
+	}
+}
+
+// runDeployBinary ships a binary to a node in one auditable operation: an atomic
+// checksum-verified upload to a staging path, a privileged atomic (ETXTBSY-safe)
+// install into remotePath, an optional service restart, then a verify. It is
+// pure — no printing or os.Exit — so the CLI and the MCP tool share it.
+func runDeployBinary(local, host string, port int, remotePath, service, mode, verify string) deployBinaryResult {
+	if mode == "" {
+		mode = "0755"
+	}
 	secret := getSecret()
 	resolved := resolveReachableHost(host, port)
 
@@ -127,14 +142,13 @@ func cmdDeployBinary(args []string) {
 	}
 	stage := fmt.Sprintf("/tmp/vssh-deploy-%d-%s", os.Getpid(), base)
 
-	fail := func(phase, code, msg string) {
-		writeJSON(deployBinaryResult{Success: false, Host: host, RemotePath: remotePath, Service: service, Phase: phase, ErrorCode: code, Error: msg})
-		os.Exit(1)
+	fail := func(phase, code, msg string) deployBinaryResult {
+		return deployBinaryResult{Success: false, Host: host, RemotePath: remotePath, Service: service, Phase: phase, ErrorCode: code, Error: msg}
 	}
 
 	// 1) Atomic, checksum-verified upload to a staging path.
 	if _, err := server.SendFile(resolved, port, secret, local, stage); err != nil {
-		fail("upload", "upload_failed", err.Error())
+		return fail("upload", "upload_failed", err.Error())
 	}
 
 	// 2) Privileged atomic install (+ optional service restart). Runs as the node's
@@ -152,10 +166,10 @@ func cmdDeployBinary(args []string) {
 	}
 	r, err := server.ExecCommandStructured(resolved, port, secret, install)
 	if err != nil {
-		fail("install", r.ErrorCode, err.Error())
+		return fail("install", r.ErrorCode, err.Error())
 	}
 	if !r.Success {
-		fail("install", r.ErrorCode, strings.TrimSpace(r.Stdout+r.Stderr+r.Error))
+		return fail("install", r.ErrorCode, strings.TrimSpace(r.Stdout+r.Stderr+r.Error))
 	}
 
 	// 3) Verify.
@@ -164,10 +178,10 @@ func cmdDeployBinary(args []string) {
 		verifyCmd = remotePath + " --version"
 	}
 	v, _ := server.ExecCommandStructured(resolved, port, secret, verifyCmd)
-	writeJSON(deployBinaryResult{
+	return deployBinaryResult{
 		Success: true, Host: host, RemotePath: remotePath, Service: service,
 		Phase: "ok", VerifyOutput: strings.TrimSpace(v.Stdout),
-	})
+	}
 }
 
 // cmdFwd implements the ssh -L/-R/-D replacements over the native daemon. Each

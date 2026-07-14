@@ -44,6 +44,34 @@ func toolGet(args map[string]interface{}) map[string]interface{} {
 	}
 }
 
+// toolDeployBinary (MCP) ships a binary to a node: upload → atomic privileged
+// install → optional service restart → verify, in one call. Same policy/audit
+// path as exec on the daemon.
+func toolDeployBinary(args map[string]interface{}) map[string]interface{} {
+	target := getString(args, "target")
+	local := getString(args, "local_path")
+	remote := getString(args, "remote_path")
+	if target == "" || local == "" || remote == "" {
+		return transferErr("vssh_deploy_binary", "missing_argument", "target, local_path, and remote_path are required")
+	}
+	host, port := parseHostPort(target)
+	r := runDeployBinary(local, host, port, remote, getString(args, "service"), getString(args, "mode"), getString(args, "verify"))
+	m := map[string]interface{}{
+		"success": r.Success, "tool": "vssh_deploy_binary",
+		"host": r.Host, "remote_path": r.RemotePath, "phase": r.Phase,
+	}
+	if r.Service != "" {
+		m["service"] = r.Service
+	}
+	if r.VerifyOutput != "" {
+		m["verify_output"] = r.VerifyOutput
+	}
+	if !r.Success {
+		m["error"] = map[string]interface{}{"code": r.ErrorCode, "message": r.Error}
+	}
+	return m
+}
+
 func transferErr(tool, code, msg string) map[string]interface{} {
 	return map[string]interface{}{
 		"success": false, "tool": tool,

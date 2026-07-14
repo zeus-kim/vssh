@@ -343,6 +343,8 @@ func dispatchMCPTool(name string, args map[string]interface{}) interface{} {
 		return toolPut(args)
 	case "vssh_get":
 		return toolGet(args)
+	case "vssh_deploy_binary":
+		return toolDeployBinary(args)
 	case "vssh_fleet_health":
 		return toolFleetHealth(args)
 	case "vssh_diff":

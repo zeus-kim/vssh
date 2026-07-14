@@ -118,6 +118,22 @@ func getMCPTools() []Tool {
 			},
 		},
 		{
+			Name:        "vssh_deploy_binary",
+			Description: "Ship a binary to a node in one auditable operation: checksum-verified upload to a staging path, atomic ETXTBSY-safe install into remote_path (via passwordless sudo), optional systemd/launchd service restart, then verify. Returns the phase reached (upload|install|verify|ok) and the verify output.",
+			InputSchema: InputSchema{
+				Type: "object",
+				Properties: map[string]Property{
+					"target":      {Type: "string", Description: "node to deploy to"},
+					"local_path":  {Type: "string", Description: "local binary to ship"},
+					"remote_path": {Type: "string", Description: "install destination on the node (e.g. /usr/local/bin/foo)"},
+					"service":     {Type: "string", Description: "optional service to restart after install (systemd unit or launchd label)"},
+					"mode":        {Type: "string", Description: "file mode for the installed binary (default 0755)", Default: "0755"},
+					"verify":      {Type: "string", Description: "optional verify command (default: remote_path --version)"},
+				},
+				Required: []string{"target", "local_path", "remote_path"},
+			},
+		},
+		{
 			Name:        "vssh_fleet_health",
 			Description: "Worst-first health of the whole fleet in one call: probes every node in parallel and flags down nodes, disk pressure (>=90/95%), high load (per-core >=2/4), memory pressure, and failed systemd units. Returns per-node severity+reasons and a summary count. target omitted = all known peers.",
 			InputSchema: InputSchema{
