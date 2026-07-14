@@ -32,10 +32,12 @@ func cmdPut(args []string) {
 	secret := getSecret()
 	host = resolveReachableHost(host, port)
 
-	if err := server.SendFile(host, port, secret, localPath, remotePath); err != nil {
+	n, err := server.SendFile(host, port, secret, localPath, remotePath)
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+	fmt.Printf("Sent %d bytes\n", n)
 }
 
 func cmdGet(args []string) {
@@ -60,10 +62,12 @@ func cmdGet(args []string) {
 	secret := getSecret()
 	host = resolveReachableHost(host, port)
 
-	if err := server.RecvFile(host, port, secret, remotePath, localPath); err != nil {
+	n, err := server.RecvFile(host, port, secret, remotePath, localPath)
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+	fmt.Printf("Received %d bytes\n", n)
 }
 
 // shellQuote single-quotes a string for safe embedding in a remote /bin/sh command.
@@ -129,7 +133,7 @@ func cmdDeployBinary(args []string) {
 	}
 
 	// 1) Atomic, checksum-verified upload to a staging path.
-	if err := server.SendFile(resolved, port, secret, local, stage); err != nil {
+	if _, err := server.SendFile(resolved, port, secret, local, stage); err != nil {
 		fail("upload", "upload_failed", err.Error())
 	}
 

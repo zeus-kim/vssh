@@ -92,6 +92,32 @@ func getMCPTools() []Tool {
 			},
 		},
 		{
+			Name:        "vssh_put",
+			Description: "Upload a local file to a node over the native protocol (TLS, checksum-verified, atomic rename on the daemon). The daemon enforces the operator key's path policy on the write. Returns bytes transferred.",
+			InputSchema: InputSchema{
+				Type: "object",
+				Properties: map[string]Property{
+					"target":      {Type: "string", Description: "node to upload to"},
+					"local_path":  {Type: "string", Description: "local file path to read"},
+					"remote_path": {Type: "string", Description: "destination path on the node"},
+				},
+				Required: []string{"target", "local_path", "remote_path"},
+			},
+		},
+		{
+			Name:        "vssh_get",
+			Description: "Download a file from a node to the controller over the native protocol (TLS, checksum-verified, atomic rename locally). Returns bytes transferred.",
+			InputSchema: InputSchema{
+				Type: "object",
+				Properties: map[string]Property{
+					"target":      {Type: "string", Description: "node to download from"},
+					"remote_path": {Type: "string", Description: "source path on the node"},
+					"local_path":  {Type: "string", Description: "local destination path"},
+				},
+				Required: []string{"target", "remote_path", "local_path"},
+			},
+		},
+		{
 			Name:        "vssh_fleet_health",
 			Description: "Worst-first health of the whole fleet in one call: probes every node in parallel and flags down nodes, disk pressure (>=90/95%), high load (per-core >=2/4), memory pressure, and failed systemd units. Returns per-node severity+reasons and a summary count. target omitted = all known peers.",
 			InputSchema: InputSchema{

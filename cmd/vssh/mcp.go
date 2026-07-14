@@ -339,6 +339,10 @@ func dispatchMCPTool(name string, args map[string]interface{}) interface{} {
 		return toolMemoryAsk(args)
 	case "vssh_memory_discover":
 		return toolMemoryDiscover(args)
+	case "vssh_put":
+		return toolPut(args)
+	case "vssh_get":
+		return toolGet(args)
 	case "vssh_fleet_health":
 		return toolFleetHealth(args)
 	case "vssh_diff":

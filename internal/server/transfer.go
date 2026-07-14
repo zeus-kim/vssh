@@ -164,23 +164,27 @@ func vauth1(conn net.Conn, priv ed25519.PrivateKey, pub string, authDeadline tim
 }
 
 // SendFile sends a file to remote host
-func SendFile(host string, port int, secret, localPath, remotePath string) error {
+// SendFile uploads localPath to remotePath on the daemon and returns the number
+// of bytes sent. It does NOT print — callers that want a human line print it
+// themselves, so the function is safe to call from the MCP server (whose stdout
+// is the JSON-RPC channel).
+func SendFile(host string, port int, secret, localPath, remotePath string) (int64, error) {
 	// Open local file
 	f, err := os.Open(localPath)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer f.Close()
 
 	stat, err := f.Stat()
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// Connect + authenticate (VAUTH1 preferred, legacy HMAC fallback).
 	conn, reader, err := dialAuth(host, port, secret, 5*time.Second)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer conn.Close()
 
@@ -194,42 +198,42 @@ func SendFile(host string, port int, secret, localPath, remotePath string) error
 	// Read ready
 	resp, err := reader.ReadString('\n')
 	if err != nil || resp[:5] != "READY" {
-		return fmt.Errorf("server not ready: %s", resp)
+		return 0, fmt.Errorf("server not ready: %s", resp)
 	}
 
 	// Send file data, hashing as we go for end-to-end integrity.
 	h := md5.New()
 	n, err := io.CopyBuffer(io.MultiWriter(conn, h), f, make([]byte, transferBufSize))
 	if err != nil {
-		return err
+		return n, err
 	}
 	localSum := hex.EncodeToString(h.Sum(nil))
 
 	// Read confirmation: "OK <bytes> [md5]"
 	resp, err = reader.ReadString('\n')
 	if err != nil {
-		return fmt.Errorf("no confirmation")
+		return n, fmt.Errorf("no confirmation")
 	}
 	if len(resp) < 2 || resp[:2] != "OK" {
-		return fmt.Errorf("transfer failed: %s", strings.TrimSpace(resp))
+		return n, fmt.Errorf("transfer failed: %s", strings.TrimSpace(resp))
 	}
 	// Verify the checksum when the server reports one (newer daemons do);
 	// silently skip against older daemons that only send "OK <bytes>".
 	if fields := strings.Fields(resp); len(fields) >= 3 {
 		if remoteSum := fields[2]; remoteSum != localSum {
-			return fmt.Errorf("checksum mismatch: local=%s remote=%s", localSum, remoteSum)
+			return n, fmt.Errorf("checksum mismatch: local=%s remote=%s", localSum, remoteSum)
 		}
 	}
 
-	fmt.Printf("Sent %d bytes\n", n)
-	return nil
+	return n, nil
 }
 
-// RecvFile receives a file from remote host
-func RecvFile(host string, port int, secret, remotePath, localPath string) error {
+// RecvFile downloads remotePath to localPath and returns the number of bytes
+// received. Like SendFile it does not print, so it is MCP-safe.
+func RecvFile(host string, port int, secret, remotePath, localPath string) (int64, error) {
 	conn, reader, err := dialAuth(host, port, secret, 5*time.Second)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer conn.Close()
 
@@ -240,11 +244,11 @@ func RecvFile(host string, port int, secret, remotePath, localPath string) error
 	// Read size
 	resp, err := reader.ReadString('\n')
 	if err != nil {
-		return err
+		return 0, err
 	}
 	var size int64
 	if _, err := fmt.Sscanf(resp, "SIZE %d", &size); err != nil {
-		return fmt.Errorf("invalid response: %s", strings.TrimSpace(resp))
+		return 0, fmt.Errorf("invalid response: %s", strings.TrimSpace(resp))
 	}
 	// "SIZE <n> [md5]" — capture the checksum when present (newer daemons).
 	var remoteSum string
@@ -260,7 +264,7 @@ func RecvFile(host string, port int, secret, remotePath, localPath string) error
 	tmp := fmt.Sprintf("%s.vssh.tmp.%d", localPath, os.Getpid())
 	f, err := os.Create(tmp)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// Receive data (use reader to handle buffered data), hashing as we go.
@@ -272,7 +276,7 @@ func RecvFile(host string, port int, secret, remotePath, localPath string) error
 	if err != nil {
 		f.Close()
 		os.Remove(tmp)
-		return err
+		return n, err
 	}
 	f.Sync()
 	f.Close()
@@ -288,16 +292,15 @@ func RecvFile(host string, port int, secret, remotePath, localPath string) error
 	if remoteSum != "" {
 		if localSum := hex.EncodeToString(h.Sum(nil)); localSum != remoteSum {
 			os.Remove(tmp)
-			return fmt.Errorf("checksum mismatch: remote=%s local=%s", remoteSum, localSum)
+			return n, fmt.Errorf("checksum mismatch: remote=%s local=%s", remoteSum, localSum)
 		}
 	}
 	if err := os.Rename(tmp, localPath); err != nil {
 		os.Remove(tmp)
-		return err
+		return n, err
 	}
 
-	fmt.Printf("Received %d bytes\n", n)
-	return nil
+	return n, nil
 }
 
 // HandleTransfer handles file transfer on server side

@@ -5,6 +5,10 @@ Notable changes to **vssh**. Versioning is semantic-ish (`0.MINOR.PATCH`).
 ## [Unreleased]
 
 ### Added
+- **File transfer over MCP** — `vssh_put`/`vssh_get` (in the `vssh_transport`
+  group) upload/download files over the native protocol, checksum-verified and
+  policy-gated. Previously only the CLI (`vssh put`/`get`) had this; the MCP gap
+  is closed so an agent can move files directly.
 - **Fleet selectors** — `vssh intent`/`vssh_intent` `--target` accepts memory-backed
   selectors (`@gpu`, `@role:gpu`, `@tag:prod`, `@service:ollama`, `@all`) and
   comma-separated hosts, run in parallel with per-node results. One request fans

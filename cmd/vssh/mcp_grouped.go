@@ -36,6 +36,7 @@ func groupActions() map[string]map[string]string {
 		},
 		"vssh_transport": {
 			"artifact_collect": "vssh_artifact_collect", "tunnel": "vssh_tunnel",
+			"put": "vssh_put", "get": "vssh_get",
 		},
 		"vssh_route": {
 			"select": "vssh_route_select", "policy_check": "vssh_policy_check",
@@ -112,7 +113,7 @@ func groupedMCPTools() []Tool {
 		group("vssh_query", "Typed node facts and native RPCs. Set action.", "facts | facts_many | rpc | rpc_many", "vssh_facts", "vssh_facts_many", "vssh_rpc_call", "vssh_rpc_many"),
 		group("vssh_job", "Long-running daemon jobs. Set action.", "start | status | logs | cancel", "vssh_job_start", "vssh_job_status", "vssh_job_logs", "vssh_job_cancel"),
 		group("vssh_fleet", "Fleet discovery & health. Set action.", "doctor | status | list | hosts | setup", "vssh_doctor", "vssh_status", "vssh_list", "vssh_hosts_list", "vssh_setup"),
-		group("vssh_transport", "Collect file/dir evidence or port-forward. Set action.", "artifact_collect | tunnel", "vssh_artifact_collect", "vssh_tunnel"),
+		group("vssh_transport", "Move files or port-forward. Set action. put=upload a local file to a node, get=download a node file (both checksum-verified and policy-gated), artifact_collect=file/dir evidence, tunnel=port-forward.", "put | get | artifact_collect | tunnel", "vssh_put", "vssh_get", "vssh_artifact_collect", "vssh_tunnel"),
 		group("vssh_route", "Path selection and advisory policy check. Set action.", "select | policy_check", "vssh_route_select", "vssh_policy_check"),
 		group("vssh_config", "Local config; writes require VSSH_ALLOW_CONFIG_WRITE. Set action.", "list | authorize_key | revoke_key | set_node | pin_node", "vssh_config_list", "vssh_config_authorize_key", "vssh_config_revoke_key", "vssh_config_set_node", "vssh_config_pin_node"),
 		group("vssh_memory", "Fleet memory (per-node role/services/tags/notes). Set action. 'discover' auto-detects role/services/tags by probing what each node actually runs (GPUs, running units, listening ports, containers); pass apply=true to write it.", "get | set | note | auto_note | find | ask | discover", "vssh_memory_get", "vssh_memory_set", "vssh_memory_note", "vssh_memory_auto_note", "vssh_memory_find", "vssh_memory_ask", "vssh_memory_discover"),
