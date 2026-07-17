@@ -466,6 +466,13 @@ func cmdStatus() {
 		os.Exit(1)
 	}
 
+	// Override the (possibly stale) node_monitor stats with a live daemon-RPC
+	// reading so the dashboard reflects the current moment. Unreachable nodes
+	// keep their cached values. Skip with VSSH_STATUS_CACHED=1.
+	if os.Getenv("VSSH_STATUS_CACHED") == "" {
+		connector.OverlayStats(liveStatsForPeers(connector, 1000*time.Millisecond))
+	}
+
 	fmt.Print(connector.Status())
 }
 

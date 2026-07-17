@@ -193,6 +193,21 @@ func (c *Connector) Status() string {
 	return sb.String()
 }
 
+// OverlayStats replaces cached per-peer stats with freshly supplied ones, keyed
+// by node name. Peers absent from m keep their existing (cached) stats. Used to
+// override the node_monitor source with live daemon-RPC readings at display time
+// so the dashboard reflects the current moment, not a stale monitor snapshot.
+func (c *Connector) OverlayStats(m map[string]*config.PeerStats) {
+	if len(m) == 0 {
+		return
+	}
+	for i := range c.peers {
+		if s, ok := m[c.peers[i].NodeName]; ok && s != nil {
+			c.peers[i].Stats = s
+		}
+	}
+}
+
 // Exec executes a command on a peer
 func (c *Connector) Exec(target string, command []string) error {
 	peer := c.findPeer(target)
