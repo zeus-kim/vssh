@@ -52,6 +52,11 @@ const transferBufSize = 256 * 1024
 // the handshake; callers MUST read all subsequent daemon output from the
 // returned reader, never the raw conn (the reader may already hold buffered
 // bytes).
+// tlsFallbackWarned dedupes the plaintext-fallback warning to once per address
+// per process, so background stat probes that open several connections per host
+// don't repeat the same line.
+var tlsFallbackWarned sync.Map
+
 func dialAuth(host string, port int, secret string, dialTimeout time.Duration) (net.Conn, *bufio.Reader, error) {
 	_ = secret // legacy parameter; shared-HMAC fallback removed (F3)
 	if dialTimeout <= 0 {
@@ -129,9 +134,13 @@ func dialAuth(host string, port int, secret string, dialTimeout time.Duration) (
 			return nil, nil, fmt.Errorf("vtls handshake (VSSH_REQUIRE_TLS=1, no plaintext fallback): %w", herr)
 		}
 		// Pre-0.7.25 daemon (or non-TLS listener): fall back to plaintext
-		// VAUTH1 on a fresh connection, loudly — these messages are the
-		// fleet-upgrade TODO list and disappear once REQUIRE_TLS flips.
-		fmt.Fprintf(os.Stderr, "vssh: WARNING: %s does not speak TLS (pre-0.7.25 daemon?) — falling back to PLAINTEXT VAUTH1 (%v)\n", addr, herr)
+		// VAUTH1 on a fresh connection. Warn ONCE per address per process —
+		// background probes (e.g. the status dashboard) open several connections
+		// per host and would otherwise spam the same line. Still a fleet-upgrade
+		// TODO; the warning disappears once that node's daemon speaks TLS.
+		if _, seen := tlsFallbackWarned.LoadOrStore(addr, true); !seen {
+			fmt.Fprintf(os.Stderr, "vssh: WARNING: %s does not speak TLS (pre-0.7.25 daemon?) — falling back to PLAINTEXT VAUTH1 (%v)\n", addr, herr)
+		}
 	}
 
 	// 2) Plaintext VAUTH1 (legacy daemons; removed when REQUIRE_TLS flips fleet-wide).
