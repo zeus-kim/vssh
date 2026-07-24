@@ -134,12 +134,16 @@ func dialAuth(host string, port int, secret string, dialTimeout time.Duration) (
 			return nil, nil, fmt.Errorf("vtls handshake (VSSH_REQUIRE_TLS=1, no plaintext fallback): %w", herr)
 		}
 		// Pre-0.7.25 daemon (or non-TLS listener): fall back to plaintext
-		// VAUTH1 on a fresh connection. Warn ONCE per address per process —
-		// background probes (e.g. the status dashboard) open several connections
-		// per host and would otherwise spam the same line. Still a fleet-upgrade
-		// TODO; the warning disappears once that node's daemon speaks TLS.
-		if _, seen := tlsFallbackWarned.LoadOrStore(addr, true); !seen {
-			fmt.Fprintf(os.Stderr, "vssh: WARNING: %s does not speak TLS (pre-0.7.25 daemon?) — falling back to PLAINTEXT VAUTH1 (%v)\n", addr, herr)
+		// VAUTH1 on a fresh connection. Only warn when the daemon actually
+		// answered with non-TLS bytes — a transient i/o timeout or reset during
+		// the handshake is not a "doesn't speak TLS" signal and would print a
+		// misleading pre-0.7.25 message for a daemon that in fact speaks TLS.
+		// Warn ONCE per address per process (background probes open several
+		// connections per host); disappears once the daemon speaks TLS.
+		if strings.Contains(herr.Error(), "does not look like a TLS handshake") {
+			if _, seen := tlsFallbackWarned.LoadOrStore(addr, true); !seen {
+				fmt.Fprintf(os.Stderr, "vssh: WARNING: %s does not speak TLS (pre-0.7.25 daemon?) — falling back to PLAINTEXT VAUTH1 (%v)\n", addr, herr)
+			}
 		}
 	}
 

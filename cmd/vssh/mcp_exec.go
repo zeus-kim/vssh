@@ -247,7 +247,7 @@ func toolList(args map[string]interface{}) map[string]interface{} {
 	// When live health is requested, override the (possibly stale) node_monitor
 	// stats with a live daemon-RPC reading so callers get the current moment.
 	if opts.IncludeHealth {
-		connector.OverlayStats(liveStatsForPeers(connector, 1000*time.Millisecond))
+		connector.OverlayStats(liveStatsForPeers(connector, 2000*time.Millisecond))
 	}
 
 	peers := connector.ListPeers()
